@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block pagetitle %}{{ 'نظرات ' ~ room.title if room else 'نظرات مشتریان' }}{% endblock %}
+
+{% block content %}
+{# Every link on this page has to carry the room filter along, or paging and
+   sorting would quietly widen the list back to every room. #}
+{% set room_qs = ('&room=' ~ room.slug) if room else '' %}
+<section class="reviews-section">
+  <div class="container reviews-inner">
+    {% if room %}
+      <h1 class="section-title">نظرات «{{ room.title }}»</h1>
+      <p class="section-sub">
+        <a href="/rooms/{{ room.slug }}">صفحهٔ {{ room.title }}</a>
+        ·
+        <a href="/reviews">نظرات همهٔ اتاق‌ها</a>
+      </p>
+    {% else %}
+      <h1 class="section-title">نظرات مشتریان</h1>
+    {% endif %}
+
+    {% if stats.has_reviews %}
+      <div class="review-stats cascade">
+        <div class="rating-big">
+          {{ stats.average|stars('امتیاز متوسط') }}
+          <span class="rating-num">{{ stats.average|fa }}</span>
+          <span class="rating-count">از {{ stats.count|fa }} نظر</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="reviews-controls">
+      <div class="sort">
+        <span class="sort-label">مرتب‌سازی:</span>
+        {% set sort_options = [('newest', 'جدیدترین'), ('oldest', 'قدیمی‌ترین')] %}
+        {% for s, lbl in sort_options %}
+          <a class="sort-link{% if sort == s %} active{% endif %}" href="?sort={{ s }}&page=1{{ room_qs }}">{{ lbl }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if reviews %}
+      <div class="reviews-grid">
+        {% for review in reviews %}
+          <article class="review-card" itemscope itemtype="https://schema.org/Review">
+            <meta itemprop="reviewRating" content="{{ review.rating }}">
+            <div class="review-stars" aria-label="امتیاز">
+              {% for i in range(1, 6) %}
+                <span class="{{ 'on' if i <= review.rating else '' }}" aria-hidden="true">★</span>
+              {% endfor %}
+            </div>
+            <blockquote class="review-body" itemprop="reviewBody">{{ review.body }}</blockquote>
+            <cite class="review-author" itemprop="author">{{ review.customer_name }}</cite>
+          </article>
+        {% endfor %}
+      </div>
+
+      {% if has_more %}
+        <div class="pagination">
+          <a class="btn btn-outline" href="?sort={{ sort }}&page={{ page + 1 }}{{ room_qs }}">بعدی →</a>
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="empty">{{ 'هنوز نظری برای این اتاق ثبت نشده.' if room else 'هنوز نظری ثبت نشده.' }}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

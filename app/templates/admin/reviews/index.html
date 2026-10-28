@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}نظرات{% endblock %}
+{% block toptitle %}مدیریت نظرات{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>نظرات</h1>
+    <p class="muted">
+      میانگین {{ average|fa }} از {{ approved_count|fa }} نظر منتشرشده
+    </p>
+  </div>
+</div>
+
+<nav class="tab-bar">
+  <a class="tab{% if not active_status %} active{% endif %}" href="/admin/reviews">همه</a>
+  {% for s in statuses %}
+    <a class="tab{% if active_status == s %} active{% endif %}" href="/admin/reviews?status={{ s }}">
+      {{ labels[s] }}{% if counts.get(s) %} ({{ counts[s]|fa }}){% endif %}
+    </a>
+  {% endfor %}
+</nav>
+
+<section class="panel">
+  {% if rows %}
+    {% for r in rows %}
+      <article class="review-row{% if r.reported %} reported{% endif %}">
+        <div class="review-row-head">
+          <span class="stars-mini" aria-label="امتیاز">
+            {% for i in range(1, 6) %}<span class="{{ 'on' if i <= r.rating else '' }}">★</span>{% endfor %}
+          </span>
+          <a class="row-link strong" href="/admin/reviews/{{ r.id }}">{{ r.scenario_title }}</a>
+          <span class="status status-{{ 'confirmed' if r.status == 'approved' else ('cancelled' if r.status in ('rejected','hidden') else 'pending') }}">
+            {{ labels.get(r.status, r.status) }}
+          </span>
+          {% if r.reported %}<span class="tag danger">گزارش‌شده</span>{% endif %}
+        </div>
+        <p class="review-row-body">{{ r.body }}</p>
+        <div class="review-row-foot">
+          <span class="muted">
+            {{ r.customer_name }} — <span dir="ltr">{{ r.customer_phone|fa }}</span>
+            — {{ r.created_at|iso_dt }}
+          </span>
+          {% if can_moderate %}
+            <span class="row-actions">
+              {% if r.status != 'approved' %}
+                <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form">
+                  <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="approve">
+                  <button class="btn-mini ok" type="submit">تأیید</button>
+                </form>
+              {% endif %}
+              {% if r.status != 'rejected' %}
+                <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form">
+                  <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="reject">
+                  <button class="btn-mini" type="submit">رد</button>
+                </form>
+              {% endif %}
+              {% if r.status != 'hidden' %}
+                <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form">
+                  <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                  <input type="hidden" name="action" value="hide">
+                  <button class="btn-mini" type="submit">پنهان</button>
+                </form>
+              {% endif %}
+              <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form"
+                    data-confirm="این نظر برای همیشه حذف شود؟">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <button class="btn-mini danger" type="submit">حذف</button>
+              </form>
+            </span>
+          {% endif %}
+        </div>
+        {% if r.admin_reply %}
+          <div class="note-box">
+            <span class="muted">پاسخ مدیر:</span> {{ r.admin_reply }}
+          </div>
+        {% endif %}
+        {% if r.reported and r.report_reason %}
+          <div class="note-box danger-box">
+            <span class="muted">دلیل گزارش:</span> {{ r.report_reason }}
+          </div>
+        {% endif %}
+      </article>
+    {% endfor %}
+  {% else %}
+    <p class="empty">نظری با این فیلتر یافت نشد.</p>
+  {% endif %}
+</section>
+{% endblock %}

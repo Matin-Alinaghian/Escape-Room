@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block pagetitle %}کد رهگیری {{ r.code }}{% endblock %}
+
+{% block content %}
+<section class="confirm-section">
+  <div class="container confirm-grid">
+    <div class="confirm-card">
+      <div class="confirm-badge">درخواست ثبت شد</div>
+      <div class="confirm-code">{{ r.code }}</div>
+      <p class="confirm-sub">کد رهگیری را یادداشت کنید یا عکس بگیرید.</p>
+
+      <div class="confirm-meta">
+        <dl>
+          <dt>اتاق</dt><dd><a href="/rooms/{{ r.scenario_slug }}">{{ r.scenario_title }}</a></dd>
+          <dt>تاریخ</dt><dd>{{ r.slot_date|jdate(weekday=true) }}</dd>
+          <dt>ساعت</dt><dd>{{ r.start_time }}</dd>
+          <dt>مشارکت‌کنندگان</dt><dd>{{ r.participants }} نفر</dd>
+          <dt>مبلغ</dt><dd>{{ r.total_price|int|money }}</dd>
+          <dt>وضعیت</dt>
+          <dd>
+            <span class="status status-{{ r.status }}">{{ r.status|status_fa }}</span>
+          </dd>
+        </dl>
+      </div>
+
+      <div class="confirm-actions">
+        <a class="btn btn-outline" href="/rooms/{{ r.scenario_slug }}">بازگشت به اتاق‌ها</a>
+        <button type="button" class="btn btn-outline" onclick="window.print()">چاپ صفحه</button>
+      </div>
+    </div>
+
+    <aside class="confirm-note">
+      <h3>نکات مهم</h3>
+      <ul>
+        <li>لطفاً ۱۰ دقیقه پیش از ساعت رزرو در محل حاضر شوید.</li>
+        <li>پشتیبانی: {{ site.phone|default('۰۹۱۴۰۴۵۶۸۷۷') }}</li>
+        <li>تلفن همراه داخل اتاق ممنوع است.</li>
+      </ul>
+      {% if SMS_ENABLED %}
+        <p class="hint">پیامک تأیید به شماره موبایل شما ارسال می‌شود.</p>
+      {% endif %}
+    </aside>
+  </div>
+</section>
+{% endblock %}

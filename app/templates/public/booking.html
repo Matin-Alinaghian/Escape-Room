@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block pagetitle %}رزرو {{ scenario.title }}{% endblock %}
+
+{% block content %}
+<section class="booking-page">
+  <div class="container">
+    <nav class="breadcrumb"><a href="/rooms">اتاق‌ها</a> / <a href="/rooms/{{ scenario.slug }}">{{ scenario.title }}</a> / رزرو</nav>
+
+    <div class="booking-page-grid">
+      <div class="booking-side">
+        {% if cover %}
+          <img class="booking-cover" src="{{ cover }}" alt="{{ scenario.title }}">
+        {% endif %}
+        <div class="booking-summary">
+          <h1 class="booking-title">{{ scenario.title }}</h1>
+          <p class="booking-price">
+            {% if scenario.price_per_group %}
+              قیمت گروهی: {{ scenario.price_per_group|int|money }}
+            {% else %}
+              {{ scenario.price_per_person|int|money }} به ازای هر نفر
+            {% endif %}
+          </p>
+          <ul class="booking-specs">
+            <li><span class="spec-l">مدت</span> <span>{{ scenario.duration_minutes|fa }} دقیقه</span></li>
+            <li><span class="spec-l">تعداد بازیکنان</span> <span>{{ scenario.min_players|players(scenario.max_players) }}</span></li>
+            <li><span class="spec-l">سختی</span> <span>{{ ['آسان','کمی سخت','متوسط','سخت','خیلی سخت'][scenario.difficulty-1]|default('متوسط') }}</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <form method="post" class="booking-form" autocomplete="on">
+        <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+
+        <p class="booking-signedin">
+          رزرو برای حساب <strong>{{ customer.name }}</strong> ثبت می‌شود.
+          <a href="{{ url_for('account.account') }}">حساب من</a>
+        </p>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="first_name">نام</label>
+            <input id="first_name" name="first_name" type="text" required autocomplete="given-name"
+                   value="{{ request.form.get('first_name') or prefill.first_name }}" inputmode="text" dir="auto">
+          </div>
+          <div class="field">
+            <label for="family_name">نام خانوادگی</label>
+            <input id="family_name" name="family_name" type="text" required autocomplete="family-name"
+                   value="{{ request.form.get('family_name') or prefill.family_name }}" inputmode="text" dir="auto">
+          </div>
+          <div class="field">
+            <label for="phone">شماره تلفن <span class="optional">(شماره حساب شما)</span></label>
+            <input id="phone" name="phone" type="tel" required autocomplete="tel" readonly
+                   value="{{ request.form.get('phone') or prefill.phone }}" inputmode="numeric" dir="ltr">
+          </div>
+          <div class="field">
+            <label for="email">ایمیل <span class="optional">(اختیاری)</span></label>
+            <input id="email" name="email" type="email" autocomplete="email"
+                   value="{{ request.form.get('email') or prefill.email }}">
+          </div>
+          {# The count is typed, not stepped: the spinner is gone and the value
+             is kept inside the limits the room actually accepts. #}
+          <div class="field">
+            <label for="participants">تعداد نفرات <span class="optional">({{ min_players }} تا {{ max_players }} نفر)</span></label>
+            <input id="participants" name="participants" type="text" inputmode="numeric" dir="ltr"
+                   pattern="[0-9]+" data-min="{{ min_players }}" data-max="{{ max_players }}"
+                   value="{{ request.form.get('participants') or min_players }}" required
+                   aria-describedby="participantsHint"
+                   oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                  <p class="hint" id="participantsHint">عدد را بین {{ min_players }} تا {{ max_players }} نفر وارد کنید.</p>
+          </div>
+        </div>
+
+        <div class="form-section-title">تاریخ و ساعت</div>
+
+        <div class="date-picker">
+          <div class="field">
+            <label for="date">تاریخ</label>
+            <div class="date-nav">
+              <button type="button" class="date-prev" id="datePrev" aria-label="روز قبل">←</button>
+              <span id="dateLabel">{{ selected_date|jdate(weekday=true) }}</span>
+              <button type="button" class="date-next" id="dateNext" aria-label="روز بعد">→</button>
+            </div>
+            <input type="hidden" name="date" id="dateInput" value="{{ selected_date }}">
+          </div>
+        </div>
+
+        <div class="slots-grid" id="slotsGrid">
+          {% if slots %}
+            {# A session that is full says so ("رزرو شده") and cannot be picked:
+               the button is disabled, and the server re-checks the seats in
+               the booking transaction anyway. #}
+            {% for slot in slots %}
+              <button type="submit" name="slot_id" value="{{ slot.id }}"
+                      class="slot-btn is-{{ slot.state }}{% if not slot.available %} sold-out{% endif %}"
+                      {% if not slot.available %}disabled aria-disabled="true"{% endif %}>
+                <span class="slot-time">{{ slot.start_time }} — {{ slot.end_time }}</span>
+                {% if slot.available %}
+                  <span class="slot-capacity available">{{ slot.remaining }} فضا باقی مانده</span>
+                {% else %}
+                  <span class="slot-state">{{ slot.state_label }}</span>
+                {% endif %}
+                {% if slot.price %}<span class="slot-price">{{ slot.price|int|money }}</span>{% endif %}
+              </button>
+            {% endfor %}
+          {% else %}
+            <p class="empty">برای این تاریخ ساعتی وجود ندارد.</p>
+          {% endif %}
+        </div>
+
+        <div class="form-grid">
+          <div class="field full">
+            <label for="note">یادداشت <span class="optional">(اختیاری)</span></label>
+            <textarea id="note" name="note" rows="3">{{ request.form.get('note') or '' }}</textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-full">ثبت درخواست رزرو</button>
+        <p class="form-law">با ثبت درخواست، قوانین بازی را خوانده و قبول کرده‌اید.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var grid = document.getElementById('slotsGrid');
+  var label = document.getElementById('dateLabel');
+  var input = document.getElementById('dateInput');
+  if(!grid || !label || !input) return;
+  var current = new Date('{{ selected_date }}').getTime();
+  var CURRENCY = '{{ currency_label }}';
+  function formatPrice(value){
+    return Number(value).toLocaleString('fa-IR') + ' ' + CURRENCY;
+  }
+
+  function render(dateMs){
+    var d = new Date(dateMs);
+    var y=d.getFullYear(), m=d.getMonth(), day=d.getDate();
+    var iso = y + '-' + (m+1<10?'0':'') + (m+1) + '-' + (day<10?'0':'') + day;
+    input.value = iso;
+    fetch('/api/scenarios/{{ scenario.slug }}/slots?date=' + iso)
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(data){
+        // The day label comes from the server: it is the only side that knows
+        // the Jalali wording, and it has to follow the arrows.
+        if(data.date_label) label.textContent = data.date_label;
+        if(!data.slots || !data.slots.length){
+          grid.innerHTML = '<p class="empty">برای این تاریخ ساعتی وجود ندارد.</p>';
+          return;
+        }
+        grid.innerHTML = '';
+        data.slots.forEach(function(slot){
+          var btn = document.createElement('button');
+          btn.type='submit'; btn.name='slot_id'; btn.value=slot.id;
+          // Same three states the server renders: full sessions read
+          // "رزرو شده" and are disabled instead of looking selectable.
+          btn.className = 'slot-btn is-' + slot.state + (slot.available ? '' : ' sold-out');
+          if(!slot.available){
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+          }
+          btn.innerHTML =
+            '<span class="slot-time">'+slot.start_time+' — '+slot.end_time+'</span>' +
+            (slot.available
+              ? '<span class="slot-capacity available">'+ slot.remaining +' فضا باقی مانده</span>'
+              : '<span class="slot-state">'+ (slot.state_label || 'رزرو شده') +'</span>') +
+            (slot.price ? '<span class="slot-price">'+ formatPrice(slot.price) +'</span>' : '');
+          grid.appendChild(btn);
+        });
+      })
+      .catch(function(){ grid.innerHTML='<p class="empty">خطا در بارگذاری ساعات.</p>'; });
+  }
+  render(current);
+  document.getElementById('datePrev').addEventListener('click', function(){ current-=86400000; render(current); });
+  document.getElementById('dateNext').addEventListener('click', function(){ current+=86400000; render(current); });
+})();
+
+(function(){
+  /* Participant count: typed digits only, clamped to what this room accepts.
+     The server checks the same bounds again, so the clamp is a courtesy, not
+     the rule. */
+  var input = document.getElementById('participants');
+  if(!input) return;
+  var min = parseInt(input.dataset.min, 10) || 1;
+  var max = parseInt(input.dataset.max, 10) || min;
+  var FA = '۰۱۲۳۴۵۶۷۸۹';
+
+  function toLatin(value){
+    return String(value || '').replace(/[\u06F0-\u06F9\u0660-\u0669]/g, function(ch){
+      var code = ch.charCodeAt(0);
+      var digit = code >= 0x06F0 ? code - 0x06F0 : code - 0x0660;
+      return String(digit);
+    });
+  }
+  function toFa(value){
+    return String(value).replace(/[0-9]/g, function(ch){ return FA[ch.charCodeAt(0) - 48]; });
+  }
+  function digitsOnly(){
+    var stripped = input.value.replace(/[^0-9\u06F0-\u06F9\u0660-\u0669]/g, '');
+    if(stripped !== input.value) input.value = stripped;
+  }
+  function clamp(){
+    var n = parseInt(toLatin(input.value), 10);
+    if(isNaN(n)) n = min;
+    if(n < min) n = min;
+    if(n > max) n = max;
+    input.value = toFa(n);
+  }
+
+  input.addEventListener('input', digitsOnly);
+  input.addEventListener('blur', clamp);
+  input.addEventListener('change', clamp);
+  if(input.form) input.form.addEventListener('submit', clamp);
+})();
+</script>
+{% endblock %}

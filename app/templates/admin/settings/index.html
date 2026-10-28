@@ -1,0 +1,154 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}تنظیمات{% endblock %}
+{% block toptitle %}تنظیمات سامانه{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>تنظیمات</h1>
+    <p class="muted">آدرس سایت: <span dir="ltr">{{ site_url }}</span> — منطقه زمانی: {{ timezone }}</p>
+  </div>
+</div>
+
+<nav class="tab-bar">
+  <a class="tab" href="#booking">رزرو</a>
+  <a class="tab" href="#reviews">نظرات</a>
+  <a class="tab" href="#sound">صدا</a>
+  <a class="tab" href="#templates">قالب پیامک</a>
+  <a class="tab" href="#integrations">سرویس‌ها</a>
+</nav>
+
+<section class="panel" id="booking">
+  <h2 class="panel-title">قواعد رزرو</h2>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="booking">
+    <div class="fld">
+      <label class="check-row big">
+        <input type="checkbox" name="booking.enabled" value="1" {% if booking.enabled %}checked{% endif %}>
+        <span>رزرو آنلاین فعال باشد</span>
+      </label>
+    </div>
+    <div class="fld">
+      <label for="booking.min_notice_hours">حداقل مهلت رزرو (ساعت)</label>
+      <input id="booking.min_notice_hours" name="booking.min_notice_hours" type="number" min="0" max="168" value="{{ booking.min_notice_hours }}">
+    </div>
+    <div class="fld">
+      <label for="booking.cancel_window_hours">مهلت لغو رایگان (ساعت)</label>
+      <input id="booking.cancel_window_hours" name="booking.cancel_window_hours" type="number" min="0" max="168" value="{{ booking.cancel_window_hours }}">
+    </div>
+    <div class="fld">
+      <label for="booking.currency">واحد پول</label>
+      <input id="booking.currency" name="booking.currency" value="{{ booking.currency }}">
+    </div>
+    <div class="fld">
+      <label for="booking.default_price">قیمت پیش‌فرض (تومان)</label>
+      <input id="booking.default_price" name="booking.default_price" type="number" min="0" value="{{ booking.default_price }}">
+    </div>
+    <div class="fld full">
+      <button class="btn-mini primary" type="submit">ذخیره قواعد رزرو</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" id="reviews">
+  <h2 class="panel-title">تنظیمات نظرات</h2>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="reviews">
+    <div class="fld">
+      <label for="review.invite_delay_hours">ارسال دعوت‌نظر پس از (ساعت)</label>
+      <input id="review.invite_delay_hours" name="review.invite_delay_hours" type="number" min="0" max="720" value="{{ review.invite_delay_hours }}">
+    </div>
+    <div class="fld">
+      <label class="check-row big">
+        <input type="checkbox" name="review.auto_approve" value="1" {% if review.auto_approve %}checked{% endif %}>
+        <span>انتشار خودکار نظرات بدون تأیید مدیر</span>
+      </label>
+    </div>
+    <div class="fld full">
+      <button class="btn-mini primary" type="submit">ذخیره تنظیمات نظرات</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" id="templates">
+  <div class="panel-head">
+    <h2 class="panel-title">قالب پیامک‌ها</h2>
+    <a class="btn-mini" href="/admin/settings/notifications">صف پیامک‌ها</a>
+  </div>
+  <p class="muted">جای‌نگهدارهای مجاز: {{ placeholders|join('، ') }}</p>
+  <form method="post">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="templates">
+    {% for t in templates %}
+      <div class="tpl-row">
+        <div class="tpl-head">
+          <strong>{{ t.label }}</strong>
+          <code>{{ t.event }}</code>
+          <label class="check-row inline">
+            <input type="checkbox" name="active_{{ t.event }}" value="1" {% if t.active %}checked{% endif %}>
+            <span>فعال</span>
+          </label>
+        </div>
+        <input type="hidden" name="event" value="{{ t.event }}">
+        <textarea name="body_{{ t.event }}" rows="4" dir="auto">{{ t.body }}</textarea>
+      </div>
+    {% endfor %}
+    <button class="btn-mini primary" type="submit">ذخیره قالب‌ها</button>
+  </form>
+</section>
+
+<section class="panel" id="sound">
+  <h2 class="panel-title">تنظیمات صدا</h2>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="sound">
+    <div class="fld">
+      <label class="check-row big">
+        <input type="checkbox" id="sound-enabled" name="sound.enabled" value="1"
+               {% if sound_enabled %}checked{% endif %}>
+        <span>فعال‌سازی صداگذاری محیطی در صفحه‌های عمومی سایت</span>
+      </label>
+    </div>
+    <div class="fld">
+      <label for="sound-volume">میزان صدا پیش‌فرض (0 تا 1)</label>
+      <input id="sound-volume" name="sound.volume" type="number" min="0" max="1" step="0.05"
+             value="{{ sound_volume | default(0.18) }}">
+    </div>
+    <div class="fld full">
+      <button class="btn-mini primary" type="submit">ذخیره تنظیمات صدا</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel" id="integrations">
+  <h2 class="panel-title">سرویس‌های بیرونی</h2>
+  <div class="grid-2">
+    <div class="integration-card {{ 'on' if integrations.sms.enabled }}">
+      <h3>پیامک</h3>
+      <p>
+        وضعیت: <strong>{{ 'فعال' if integrations.sms.enabled else 'غیرفعال' }}</strong><br>
+        ارائه‌دهنده: <code>{{ integrations.sms.provider }}</code><br>
+        کلید API: {{ 'ثبت شده' if integrations.sms.has_key else 'ثبت نشده' }}
+      </p>
+      <p class="muted">کلیدها از فایل <code>.env</code> خوانده می‌شوند: <code>SMS_ENABLED</code>، <code>SMS_API_KEY</code>.</p>
+    </div>
+    <div class="integration-card {{ 'on' if integrations.payment.enabled }}">
+      <h3>درگاه پرداخت</h3>
+      <p>
+        وضعیت: <strong>{{ 'فعال' if integrations.payment.enabled else 'غیرفعال' }}</strong><br>
+        ارائه‌دهنده: <code>{{ integrations.payment.provider }}</code><br>
+        کلید API: {{ 'ثبت شده' if integrations.payment.has_key else 'ثبت نشده' }}
+      </p>
+      <p class="muted">تا زمانی که درگاه پیکربندی نشود، رزرو بدون پرداخت ثبت می‌شود و هیچ پرداختی جعلاً تأیید نمی‌گردد.</p>
+    </div>
+  </div>
+  <div class="form-actions">
+    <form method="post" action="/admin/settings/notifications/run" class="inline-form">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <button class="btn-mini" type="submit">ارسال پیامک‌های در صف</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

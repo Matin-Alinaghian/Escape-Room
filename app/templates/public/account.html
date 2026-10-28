@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block pagetitle %}حساب کاربری{% endblock %}
+
+{% block content %}
+<section class="account-section">
+  <div class="container">
+    <h1 class="page-title">حساب کاربری</h1>
+
+    {% if customer.must_change_pw %}
+      <div class="flash info">رمز فعلی شما موقت است (پیامک‌شده)؛ لطفاً آن را تغییر دهید.</div>
+    {% endif %}
+
+    <div class="grid-2">
+      <section class="panel">
+        <h2 class="panel-title">اطلاعات من</h2>
+        <dl class="info-list">
+          <dt>نام</dt><dd>{{ customer.name }}</dd>
+          <dt>شماره تلفن</dt><dd dir="ltr">{{ customer.phone|fa }}</dd>
+          {% if customer.email %}<dt>ایمیل</dt><dd dir="ltr">{{ customer.email }}</dd>{% endif %}
+        </dl>
+
+        <h2 class="panel-title">تغییر رمز عبور</h2>
+        {# `pw-form` keeps the two password rows a readable width; `data-min-len`
+           lets base.js light the hint up green once the rule is satisfied. #}
+        <form method="post" class="pw-form">
+          <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="change-password">
+          <div class="fld">
+            <label for="oldp">رمز عبور فعلی</label>
+            <input id="oldp" name="old_password" type="password" required autocomplete="current-password" dir="ltr">
+          </div>
+          <div class="fld">
+            <label for="newp">رمز عبور جدید</label>
+            <input id="newp" name="new_password" type="password" required minlength="10"
+                   autocomplete="new-password" dir="ltr" data-min-len="10">
+            <span class="hint">حداقل ۱۰ کاراکتر</span>
+          </div>
+          <button type="submit" class="btn btn-primary">تغییر رمز</button>
+        </form>
+
+        <form method="post" style="margin-top:16px">
+          <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="logout">
+          <button type="submit" class="btn btn-outline">خروج از حساب</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">رزروهای من</h2>
+        {% if reservations %}
+          <table class="data-table">
+            <thead><tr><th>اتاق</th><th>تاریخ</th><th>ساعت</th><th>کد</th><th>وضعیت</th></tr></thead>
+            <tbody>
+            {% for r in reservations %}
+              <tr>
+                <td>{{ r.scenario_title }}</td>
+                <td>{{ r.slot_date|jdate }}</td>
+                <td dir="ltr">{{ r.start_time }}</td>
+                <td><a href="/booking/{{ r.code }}" dir="ltr">{{ r.code }}</a></td>
+                <td><span class="status status-{{ r.status }}">{{ r.status|status_fa }}</span></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty">هنوز رزروی ثبت نکرده‌اید.</p>
+          <a class="btn btn-primary" href="/rooms">مشاهده اتاق‌ها</a>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

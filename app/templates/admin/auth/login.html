@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}ورود{% endblock %}
+{% block toptitle %}ورود به پنل مدیریت{% endblock %}
+
+{% block content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="brand-escape">ESCAPE</span>
+      <span class="brand-room">ROOM</span>
+    </div>
+    <h1>ورود به پنل مدیریت</h1>
+    <p class="muted">برای مدیریت اتاق‌ها، رزروها و محتوای سایت وارد شوید.</p>
+
+    {% if error %}
+      <div class="flash error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <div class="fld">
+        <label for="username">نام کاربری</label>
+        <input id="username" name="username" type="text" autocomplete="username" required
+               dir="ltr" autofocus value="{{ request.form.get('username', '') }}">
+      </div>
+      <div class="fld">
+        <label for="password">رمز عبور</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-mini primary btn-full">ورود</button>
+    </form>
+
+    <p class="muted login-foot">
+      پشتیبانی: <span dir="ltr">{{ site.phone|default('09140456877') }}</span>
+    </p>
+  </div>
+</div>
+{% endblock %}

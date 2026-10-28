@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block pagetitle %}ساخت حساب کاربری{% endblock %}
+
+{#
+  Sign-up wizard, three server-side steps in one card:
+    step=phone     the number that will receive the code
+    step=code      the six-digit code + resend / change-number
+    step=password  name + password, then the account exists and is signed in
+  All forms are CSRF-protected by the global hook, like every other form.
+#}
+{% block content %}
+<section class="login-section">
+  <div class="container login-container">
+    <div class="login-card register-card">
+      <div class="login-icon" aria-hidden="true">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"></path>
+          <circle cx="8.5" cy="7.5" r="3.5"></circle>
+          <path d="M19 8v6M16 11h6"></path>
+        </svg>
+      </div>
+      <h1 class="login-title">ساخت حساب کاربری</h1>
+      <p class="login-sub">
+        شماره تلفن را وارد کنید، کد تأیید برایتان پیامک می‌شود و بعد رمز عبور خودتان را انتخاب می‌کنید.
+      </p>
+
+      <ol class="signup-steps" aria-label="مراحل ثبت‌نام">
+        <li class="{{ 'active' if step == 'phone' else 'done' }}">
+          <span class="step-no">۱</span> شماره تلفن
+        </li>
+        <li class="{{ 'active' if step == 'code' else ('done' if step == 'password' else '') }}">
+          <span class="step-no">۲</span> کد تأیید
+        </li>
+        <li class="{{ 'active' if step == 'password' else '' }}">
+          <span class="step-no">۳</span> رمز عبور
+        </li>
+      </ol>
+
+      <div class="login-pane">
+        {% if step == 'phone' %}
+          {# ---------- step 1: phone number ---------- #}
+          <form method="post" action="{{ url_for('account.register') }}">
+            <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+            <div class="fld">
+              <label for="phone">شماره تلفن همراه</label>
+              <input id="phone" name="phone" type="tel" required inputmode="tel" dir="ltr"
+                     autocomplete="tel" placeholder="09xxxxxxxxx" value="{{ phone }}" autofocus>
+              <span class="hint">کد تأیید به همین شماره پیامک می‌شود.</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">دریافت کد تأیید</button>
+          </form>
+          {% if pending_phone %}
+            <p class="signup-note">
+              یک کد برای شماره <span dir="ltr">{{ pending_phone|fa }}</span> در انتظار تأیید است.
+              <a href="{{ url_for('account.register_code') }}">ورود کد تأیید</a>
+            </p>
+          {% endif %}
+
+        {% elif step == 'code' %}
+          {# ---------- step 2: the code that was texted ---------- #}
+          <p class="signup-note">
+            کد ۶ رقمی ارسال‌شده به <span dir="ltr">{{ masked_phone|fa }}</span> را وارد کنید.
+          </p>
+
+          {% if demo_code %}
+            <div class="register-notice" role="status">
+              <strong>حالت آزمایشی</strong>
+              ارسال پیامک روی این سرور فعال نیست، پس کد تأیید همین‌جا نشان داده می‌شود:
+              <span class="demo-code" dir="ltr">{{ demo_code|fa }}</span>
+            </div>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('account.register_code') }}">
+            <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+            <div class="fld">
+              <label for="code">کد تأیید</label>
+              <input id="code" name="code" type="text" inputmode="numeric" required class="code-input"
+                     dir="ltr" maxlength="6" minlength="6" pattern="[0-9۰-۹]{6,6}"
+                     autocomplete="one-time-code" placeholder="- - - - - -" autofocus>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">تأیید کد</button>
+          </form>
+
+          <div class="signup-actions">
+            <form method="post" action="{{ url_for('account.register_code') }}">
+              <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="resend">
+              <button type="submit" class="link-btn">ارسال کد جدید</button>
+            </form>
+            <form method="post" action="{{ url_for('account.register_code') }}">
+              <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="change">
+              <button type="submit" class="link-btn">تغییر شماره تلفن</button>
+            </form>
+          </div>
+
+        {% else %}
+          {# ---------- step 3: name + password ---------- #}
+          <p class="signup-note">شماره تأیید شد. حالا نام و رمز عبور دلخواهتان را تعیین کنید.</p>
+
+          <form method="post" action="{{ url_for('account.register_password') }}">
+            <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+            <div class="fld">
+              <label for="name">نام و نام خانوادگی</label>
+              <input id="name" name="name" type="text" required autocomplete="name"
+                     value="{{ form.name }}" autofocus>
+            </div>
+            <div class="fld">
+              <label for="pass">رمز عبور</label>
+              <input id="pass" name="password" type="password" required minlength="10"
+                     autocomplete="new-password" dir="ltr">
+              <span class="hint">حداقل ۱۰ کاراکتر</span>
+            </div>
+            <div class="fld">
+              <label for="pass2">تکرار رمز عبور</label>
+              <input id="pass2" name="confirm" type="password" required minlength="10"
+                     autocomplete="new-password" dir="ltr">
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">ساخت حساب و ورود</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <div class="login-links">
+        حساب دارید؟ <a href="{{ url_for('account.unified_login') }}">وارد شوید</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

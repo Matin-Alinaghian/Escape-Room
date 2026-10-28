@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block pagetitle %}{{ title }}{% endblock %}
+
+{% block content %}
+<section class="page-section">
+  <div class="container">
+    <h1 class="page-title">{{ title }}</h1>
+    <div class="page-body">{{ body|nl2br }}</div>
+    {% if contact_rows %}
+    <dl class="contact-rows">
+      {% for label, value, href in contact_rows %}
+      <div class="contact-row">
+        <dt>
+          {% if label == 'آدرس' %}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-left:4px;">
+            <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"></path>
+            <circle cx="12" cy="9" r="2.5"></circle>
+          </svg>
+          {% endif %}
+          {{ label }}
+        </dt>
+        <dd>{% if href %}<a href="{{ href }}" target="_blank" rel="noopener">{{ value }}</a>{% else %}{{ value }}{% endif %}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+    {% endif %}
+    <div class="paper-divider" aria-hidden="true"></div>
+    {% if credit %}
+    <p class="page-credit">{{ credit }}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

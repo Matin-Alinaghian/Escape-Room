@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}مشتریان{% endblock %}
+{% block toptitle %}مشتریان{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>مشتریان</h1>
+    <p class="muted">{{ rows|length|fa }} مشتری</p>
+  </div>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="نام، تلفن یا ایمیل" class="filter-input">
+  <button class="btn-mini" type="submit">جستجو</button>
+  {% if search %}<a class="btn-mini" href="/admin/customers">پاک کردن</a>{% endif %}
+  <a class="btn-mini" href="/admin/reports/export/customers">خروجی CSV</a>
+</form>
+
+<section class="panel">
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr><th>نام</th><th>تلفن</th><th>ایمیل</th><th>تعداد رزرو</th><th>مجموع خرید</th><th>آخرین رزرو</th><th>عضویت</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="strong">{{ r.name }}</td>
+            <td class="num" dir="ltr">{{ r.phone|fa }}</td>
+            <td dir="ltr">{{ r.email or '—' }}</td>
+            <td class="num">{{ r.bookings|fa }}</td>
+            <td class="num">{{ r.spent|int|money }}</td>
+            <td class="num muted">{{ r.last_booking|iso_dt or '—' }}</td>
+            <td class="num muted">{{ r.created_at|iso_dt }}</td>
+            <td><a class="row-link" href="/admin/customers/{{ r.id }}">پروفایل</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">مشتری‌ای یافت نشد.</p>
+  {% endif %}
+</section>
+{% endblock %}

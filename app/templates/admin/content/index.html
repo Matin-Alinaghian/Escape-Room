@@ -1,0 +1,240 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}محتوای سایت{% endblock %}
+{% block toptitle %}محتوای سایت{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>محتوای سایت</h1>
+    <p class="muted">هر مقدار بلافاصله پس از ذخیره در صفحه عمومی اعمال می‌شود.</p>
+  </div>
+  <a class="btn-mini" href="/" target="_blank" rel="noopener">مشاهده سایت ↗</a>
+</div>
+
+<nav class="tab-bar">
+  {% for key, title in tabs.items() %}
+    <a class="tab{% if tab == key %} active{% endif %}" href="/admin/content/{{ key }}">{{ title }}</a>
+  {% endfor %}
+</nav>
+
+{% if tab == 'polaroids' %}
+  {# --------------------- POLAROID GALLERY EDITOR --------------------- #}
+  <form method="post" action="/admin/content/polaroids" class="panel form-panel" id="polaroidForm">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <p class="muted">
+      تصاویر نوار «پولاروید» صفحه اصلی. برای حذف یک تصویر، کادر مسیر آن را خالی کنید؛
+      برای افزودن، روی «افزودن تصویر» بزنید. اگر همه را خالی کنید، گالری پیش‌فرض برمی‌گردد.
+    </p>
+
+    <div class="polaroid-edit-grid" id="polaroidRows">
+      {% for shot in polaroids %}
+        <div class="polaroid-edit-row">
+          <div class="polaroid-preview">
+            {% if shot.src %}<img src="{{ shot.src }}" alt="{{ shot.alt }}" loading="lazy">{% endif %}
+          </div>
+          <div class="fld grow">
+            <label>مسیر تصویر</label>
+            <input name="polaroid_src" value="{{ shot.src }}" dir="ltr">
+          </div>
+          <div class="fld">
+            <label>کپشن</label>
+            <input name="polaroid_caption" value="{{ shot.caption }}">
+          </div>
+          <div class="fld">
+            <label>متن جایگزین (alt)</label>
+            <input name="polaroid_alt" value="{{ shot.alt }}">
+          </div>
+          <div class="polaroid-edit-actions">
+            <button class="btn-mini" type="button" data-pick-media>انتخاب از رسانه</button>
+            <button class="btn-mini danger" type="button" data-remove-row>حذف ردیف</button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-mini" type="button" id="addPolaroid">افزودن تصویر</button>
+      <button class="btn-mini primary" type="submit">ذخیره گالری</button>
+      <a class="btn-mini" href="/admin/content/polaroids">بازخوانی</a>
+    </div>
+  </form>
+
+  <template id="polaroidRowTemplate">
+    <div class="polaroid-edit-row">
+      <div class="polaroid-preview"></div>
+      <div class="fld grow">
+        <label>مسیر تصویر</label>
+        <input name="polaroid_src" value="" dir="ltr">
+      </div>
+      <div class="fld">
+        <label>کپشن</label>
+        <input name="polaroid_caption" value="">
+      </div>
+      <div class="fld">
+        <label>متن جایگزین (alt)</label>
+        <input name="polaroid_alt" value="">
+      </div>
+      <div class="polaroid-edit-actions">
+        <button class="btn-mini" type="button" data-pick-media>انتخاب از رسانه</button>
+        <button class="btn-mini danger" type="button" data-remove-row>حذف ردیف</button>
+      </div>
+    </div>
+  </template>
+{% else %}
+  <form method="post" action="/admin/content" class="panel form-panel">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+
+    {% for key in keys %}
+      {% if key in booleans %}
+        {# Always-posted twin: without it an unchecked box is indistinguishable
+           from a partial POST that never mentioned this key. #}
+        <input type="hidden" name="{{ key }}" value="0">
+        <label class="check-row big">
+          <input type="checkbox" name="{{ key }}" value="1" {% if values.get(key) %}checked{% endif %}>
+          <span>{{ labels.get(key, key) }}</span>
+        </label>
+      {% elif key in textareas %}
+        <div class="fld">
+          <label for="{{ key }}">{{ labels.get(key, key) }}</label>
+          <textarea id="{{ key }}" name="{{ key }}" rows="4">{{ values.get(key) or '' }}</textarea>
+          <label class="check-row small">
+            <input type="checkbox" name="__clear" value="{{ key }}">
+            <span>این فیلد خالی شود</span>
+          </label>
+        </div>
+      {% else %}
+        <div class="fld">
+          <label for="{{ key }}">{{ labels.get(key, key) }}</label>
+          {% if key in image_keys %}
+            <div class="image-field">
+              {% if values.get(key) %}
+                <img class="image-field-preview" src="{{ values.get(key) }}" alt="">
+              {% endif %}
+              <input id="{{ key }}" name="{{ key }}"
+                     value="{{ values.get(key) if values.get(key) is not none else '' }}" dir="ltr">
+              <button class="btn-mini" type="button" data-pick-media>انتخاب از رسانه</button>
+            </div>
+            <label class="check-row small">
+              <input type="checkbox" name="__clear" value="{{ key }}">
+              <span>این تصویر برداشته شود</span>
+            </label>
+          {% else %}
+            <input id="{{ key }}" name="{{ key }}"
+                   value="{{ values.get(key) if values.get(key) is not none else '' }}"
+                   {% if key in ('site.instagram','site.telegram','site.whatsapp','site.twitter') %}dir="ltr"{% endif %}>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="form-actions">
+      <button class="btn-mini primary" type="submit">ذخیره تغییرات</button>
+      <a class="btn-mini" href="/admin/content/{{ tab }}">بازخوانی</a>
+    </div>
+  </form>
+{% endif %}
+
+<!-- ==================== MEDIA PICKER ==================== -->
+<div class="media-modal hidden" id="mediaModal" role="dialog" aria-modal="true" aria-label="انتخاب تصویر">
+  <div class="media-modal-box">
+    <div class="media-modal-head">
+      <strong>انتخاب تصویر از کتابخانه رسانه</strong>
+      <button type="button" class="btn-mini" id="mediaClose" aria-label="بستن">✕</button>
+    </div>
+    {% if media %}
+      <div class="gallery-grid media-picker-grid">
+        {% for m in media %}
+          <figure class="gallery-item" data-pick="{{ m.path }}">
+            <img src="{{ m.path }}" alt="{{ m.filename }}" loading="lazy">
+            <figcaption><span class="num">{{ m.filename }}</span></figcaption>
+          </figure>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">کتابخانه رسانه خالی است؛ از بخش «رسانه» تصویر بارگذاری کنید.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function(){
+  var modal = document.getElementById('mediaModal');
+  var target = null;   // the input the picker will fill
+
+  function openPicker(input){
+    target = input;
+    if (modal) modal.classList.remove('hidden');
+  }
+  function closePicker(){
+    if (modal) modal.classList.add('hidden');
+    target = null;
+  }
+  function previewUpdate(input){
+    var row = input.closest('.polaroid-edit-row');
+    if (row){
+      var box = row.querySelector('.polaroid-preview');
+      var src = input.value.trim();
+      box.innerHTML = src ? '<img src="' + src + '" alt="" loading="lazy">' : '';
+      return;
+    }
+    var wrap = input.closest('.image-field');
+    if (wrap){
+      var img = wrap.querySelector('.image-field-preview');
+      var url = input.value.trim();
+      if (!url){
+        if (img) img.remove();
+        return;
+      }
+      if (!img){
+        img = document.createElement('img');
+        img.className = 'image-field-preview';
+        img.alt = '';
+        wrap.insertBefore(img, wrap.firstChild);
+      }
+      img.src = url;
+    }
+  }
+
+  // The whole document is delegated so rows added later (and the polaroid
+  // template) work without re-binding.
+  document.addEventListener('click', function(e){
+    var pick = e.target.closest('[data-pick-media]');
+    if (pick){
+      var holder = pick.closest('.image-field') || pick.closest('.polaroid-edit-row');
+      var input = holder && holder.querySelector('input[type="text"], input:not([type])');
+      if (input) openPicker(input);
+      return;
+    }
+    if (e.target.closest('[data-remove-row]')){
+      var row = e.target.closest('.polaroid-edit-row');
+      if (row) row.remove();
+      return;
+    }
+  });
+
+  document.querySelectorAll('[data-pick]').forEach(function(item){
+    item.addEventListener('click', function(){
+      if (!target) return;
+      target.value = item.getAttribute('data-pick');
+      previewUpdate(target);
+      closePicker();
+    });
+  });
+  if (modal){
+    modal.addEventListener('click', function(e){ if (e.target === modal) closePicker(); });
+    var closeBtn = document.getElementById('mediaClose');
+    if (closeBtn) closeBtn.addEventListener('click', closePicker);
+  }
+
+  var addBtn = document.getElementById('addPolaroid');
+  var rows = document.getElementById('polaroidRows');
+  var tpl = document.getElementById('polaroidRowTemplate');
+  if (addBtn && rows && tpl){
+    addBtn.addEventListener('click', function(){
+      rows.appendChild(tpl.content.cloneNode(true));
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}{{ row.name }}{% endblock %}
+{% block toptitle %}پروفایل مشتری{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ row.name }}</h1>
+    <p class="muted" dir="ltr">{{ row.phone|fa }}{% if row.email %} — {{ row.email }}{% endif %}</p>
+  </div>
+  <a class="btn-mini" href="/admin/customers">بازگشت</a>
+</div>
+
+<div class="stat-row">
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ stats.count|fa }}</span>
+    <span class="stat-tile-label">رزرو انجام‌شده</span>
+  </div>
+  <div class="stat-tile money">
+    <span class="stat-tile-num">{{ stats.spent|int|money }}</span>
+    <span class="stat-tile-label">مجموع خرید</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ row.created_at|iso_dt }}</span>
+    <span class="stat-tile-label">تاریخ عضویت</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2 class="panel-title">اطلاعات مشتری</h2>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <div class="fld">
+        <label for="name">نام و نام خانوادگی</label>
+        <input id="name" name="name" required value="{{ row.name }}">
+      </div>
+      <div class="fld">
+        <label for="phone">شماره تلفن</label>
+        <input id="phone" name="phone" required dir="ltr" value="{{ row.phone }}">
+      </div>
+      <div class="fld full">
+        <label for="email">ایمیل</label>
+        <input id="email" name="email" dir="ltr" value="{{ row.email or '' }}">
+      </div>
+      <div class="fld full">
+        <label for="notes">یادداشت داخلی</label>
+        <textarea id="notes" name="notes" rows="3">{{ row.notes or '' }}</textarea>
+      </div>
+      <div class="fld full">
+        <button class="btn-mini primary" type="submit">ذخیره</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">نظرات این مشتری</h2>
+    {% if reviews %}
+      {% for rv in reviews %}
+        <div class="note-box">
+          <span class="stars-mini" aria-label="امتیاز">
+            {% for i in range(1, 6) %}<span class="{{ 'on' if i <= rv.rating else '' }}">★</span>{% endfor %}
+          </span>
+          <p>{{ rv.body }}</p>
+          <span class="status status-{{ 'confirmed' if rv.status == 'approved' else 'pending' }}">{{ rv.status }}</span>
+          <span class="muted num">{{ rv.created_at|iso_dt }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty">نظری ثبت نشده است.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">تاریخچه رزروها</h2>
+  {% if reservations %}
+    <table class="data-table">
+      <thead><tr><th>کد</th><th>اتاق</th><th>تاریخ</th><th>ساعت</th><th>نفرات</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+      <tbody>
+        {% for r in reservations %}
+          <tr>
+            <td class="num"><a class="row-link" href="/admin/bookings/{{ r.id }}">{{ r.code }}</a></td>
+            <td>{{ r.scenario_title }}</td>
+            <td>{{ r.slot_date|jdate }}</td>
+            <td class="num">{{ r.start_time|fa }}</td>
+            <td class="num">{{ r.participants|fa }}</td>
+            <td class="num">{{ r.total_price|int|money }}</td>
+            <td><span class="status status-{{ r.status }}">{{ r.status }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">رزروی ثبت نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}

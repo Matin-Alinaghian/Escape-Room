@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}گزارش فعالیت{% endblock %}
+{% block toptitle %}گزارش فعالیت مدیران{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>گزارش فعالیت</h1>
+    <p class="muted">{{ total|fa }} رویداد ثبت‌شده — صفحه {{ page|fa }} از {{ pages|fa }}</p>
+  </div>
+</div>
+
+<form class="filter-bar" method="get">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="جستجو در شرح یا نام مدیر" class="filter-input">
+  <select name="action" class="filter-select">
+    <option value="">همه رویدادها</option>
+    {% for a in actions %}
+      <option value="{{ a }}" {% if filters.action == a %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <select name="admin" class="filter-select">
+    <option value="">همه مدیران</option>
+    {% for ad in admins %}
+      <option value="{{ ad.admin_id }}" {% if filters.admin == ad.admin_id|string %}selected{% endif %}>{{ ad.admin_name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn-mini" type="submit">فیلتر</button>
+  <a class="btn-mini" href="/admin/logs">پاک کردن</a>
+</form>
+
+<section class="panel">
+  {% if rows %}
+    <table class="data-table">
+      <thead><tr><th>زمان</th><th>مدیر</th><th>رویداد</th><th>شرح</th><th>IP</th><th></th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="num muted">{{ r.created_at|iso_dt }}</td>
+            <td>{{ r.admin_name or '—' }}</td>
+            <td><code>{{ r.action }}</code></td>
+            <td>{{ r.detail or '—' }}{% if r.entity_type %} <span class="muted">({{ r.entity_type }} #{{ r.entity_id }})</span>{% endif %}</td>
+            <td class="num muted" dir="ltr">{{ r.ip or '—' }}</td>
+            <td>
+              <form method="post" action="/admin/logs/{{ r.id }}/delete" class="inline-form"
+                    data-confirm="حذف این رویداد از گزارش؟ خودِ حذف هم ثبت می‌شود.">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="reason" value="حذف دستی توسط مدیر اصلی">
+                <button class="btn-mini danger" type="submit">حذف</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <nav class="pagination">
+      {% if page > 1 %}
+        <a class="btn-mini" href="?page={{ page - 1 }}&q={{ filters.q }}&action={{ filters.action }}&admin={{ filters.admin }}">قبلی</a>
+      {% endif %}
+      <span class="muted num">{{ page }} / {{ pages }}</span>
+      {% if page < pages %}
+        <a class="btn-mini" href="?page={{ page + 1 }}&q={{ filters.q }}&action={{ filters.action }}&admin={{ filters.admin }}">بعدی</a>
+      {% endif %}
+    </nav>
+  {% else %}
+    <p class="empty">رویدادی با این فیلتر یافت نشد.</p>
+  {% endif %}
+</section>
+{% endblock %}

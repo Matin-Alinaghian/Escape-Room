@@ -1,0 +1,104 @@
+/* Ambient sound toggle (public page).
+ * Rendered as a compact speaker icon inside the sticky header (top of page).
+ * Waves appear only while sound is on; a mute cross shows when off.
+ */
+
+.sound-bar {
+  display: flex;
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+.sound-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 59, 48, 0.35);
+  border-radius: 50%;
+  background: rgba(6, 6, 9, 0.55);
+  color: var(--red-soft);
+  font-family: "Vazirmatn", "IRANSans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease,
+    border-color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.sound-btn:hover {
+  background: rgba(255, 59, 48, 0.18);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.sound-btn:active {
+  transform: scale(0.96);
+}
+
+.sound-btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+.sound-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.sound-icon svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Speaker waves: only while sound is on. */
+.sound-wave {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.sound-mute {
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.sound-btn[aria-pressed="true"] .sound-wave {
+  opacity: 1;
+}
+
+.sound-btn[aria-pressed="true"] .sound-mute {
+  opacity: 0;
+}
+
+.sound-btn[aria-pressed="true"] {
+  color: var(--red-soft);
+  border-color: var(--red);
+  box-shadow: 0 0 12px rgba(255, 59, 48, 0.45);
+}
+
+.sound-btn[aria-pressed="true"] .sound-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px var(--red-soft));
+}
+
+.sound-label {
+  /* Icon-only in the header; text stays for screen readers via aria-label. */
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-btn,
+  .sound-icon,
+  .sound-wave,
+  .sound-mute {
+    transition: none;
+  }
+}

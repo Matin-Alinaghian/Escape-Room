@@ -1,0 +1,127 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}زمان‌بندی{% endblock %}
+{% block toptitle %}زمان‌بندی{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>زمان‌بندی بازی</h1>
+    <p class="muted">بازه‌های هفتگی هر اتاق؛ ساعات رزرو به‌صورت خودکار از روی این بازه‌ها ساخته می‌شود.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">افزودن / ویرایش بازه</h2>
+  <form method="post" action="/admin/schedules" class="form-grid">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <div class="fld">
+      <label for="scenario_id">اتاق</label>
+      <select id="scenario_id" name="scenario_id" required>
+        <option value="">انتخاب کنید</option>
+        {% for sc in scenarios %}
+          <option value="{{ sc.id }}" {% if active_scenario == sc.id|string %}selected{% endif %}>{{ sc.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fld">
+      <label for="weekday">روز هفته</label>
+      <select id="weekday" name="weekday">
+        <option value="">همه روزها</option>
+        {% for day in weekdays %}
+          <option value="{{ loop.index0 }}">{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fld">
+      <label for="open_time">ساعت شروع</label>
+      <input id="open_time" name="open_time" type="time" value="10:00" required>
+    </div>
+    <div class="fld">
+      <label for="close_time">ساعت پایان</label>
+      <input id="close_time" name="close_time" type="time" value="22:00" required>
+    </div>
+    <div class="fld">
+      <label for="slot_minutes">طول هر بازی (دقیقه)</label>
+      <input id="slot_minutes" name="slot_minutes" type="number" min="15" max="480" value="60">
+    </div>
+    <div class="fld">
+      <label for="capacity">ظرفیت هر ساعت</label>
+      <input id="capacity" name="capacity" type="number" min="1" max="60" value="6">
+    </div>
+    <div class="fld">
+      <label for="price_override">قیمت جایگزین (اختیاری)</label>
+      <input id="price_override" name="price_override" type="number" min="0" placeholder="قیمت پیش‌فرض اتاق">
+    </div>
+    <div class="fld">
+      <label for="valid_from">از تاریخ (اختیاری)</label>
+      <input id="valid_from" name="valid_from" type="date" dir="ltr">
+    </div>
+    <div class="fld">
+      <label for="valid_to">تا تاریخ (اختیاری)</label>
+      <input id="valid_to" name="valid_to" type="date" dir="ltr">
+    </div>
+    <div class="fld">
+      <label class="check-row">
+        <input type="checkbox" name="is_active" value="1" checked>
+        <span>فعال باشد</span>
+      </label>
+    </div>
+    <div class="fld">
+      <button class="btn-mini primary" type="submit">افزودن بازه</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">بازه‌های ثبت‌شده</h2>
+    <form method="post" action="/admin/slots/regenerate" class="inline-form">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <input type="hidden" name="scenario_id" value="{{ active_scenario }}">
+      <input type="number" name="days" value="60" min="1" max="180" class="filter-input num-input">
+      <button class="btn-mini" type="submit">بازسازی ساعات</button>
+    </form>
+  </div>
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>اتاق</th><th>روز</th><th>بازه</th><th>طول</th><th>ظرفیت</th>
+          <th>قیمت</th><th>اعتبار</th><th>وضعیت</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in rows %}
+          <tr>
+            <td>{{ s.scenario_title }}</td>
+            <td>{{ weekdays[s.weekday] if s.weekday is not none else 'همه روزها' }}</td>
+            <td class="num">{{ s.open_time|fa }} — {{ s.close_time|fa }}</td>
+            <td class="num">{{ s.slot_minutes|fa }}′</td>
+            <td class="num">{{ s.capacity|fa }}</td>
+            <td class="num">{% if s.price_override is not none %}{{ s.price_override|int|money }}{% else %}<span class="muted">پیش‌فرض</span>{% endif %}</td>
+            <td class="num muted">{{ s.valid_from|jdate or '—' }} تا {{ s.valid_to|jdate or '—' }}</td>
+            <td>
+              <span class="status status-{{ 'confirmed' if s.is_active else 'cancelled' }}">
+                {{ 'فعال' if s.is_active else 'غیرفعال' }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <form method="post" action="/admin/schedules/{{ s.id }}/toggle" class="inline-form">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <button class="btn-mini" type="submit">{{ 'غیرفعال' if s.is_active else 'فعال' }}</button>
+              </form>
+              <form method="post" action="/admin/schedules/{{ s.id }}/delete" class="inline-form"
+                    data-confirm="این بازه زمانی حذف شود؟">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <button class="btn-mini danger" type="submit">حذف</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">بازه زمانی ثبت نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}

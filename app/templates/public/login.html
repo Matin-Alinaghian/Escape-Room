@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block pagetitle %}ورود{% endblock %}
+
+{% block content %}
+<section class="login-section">
+  <div class="container login-container">
+    <div class="login-card">
+      <div class="login-icon" aria-hidden="true">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="10" width="16" height="10" rx="2"></rect>
+          <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+          <circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none"></circle>
+        </svg>
+      </div>
+      <h1 class="login-title">ورود به حساب</h1>
+      <p class="login-sub">با شماره تلفن (کاربران) یا نام کاربری (مدیران) وارد شوید.</p>
+
+      {% if static_mode %}
+      {# Static mirror: there is no server to process the form, so explain
+         instead of showing a form that can never submit. #}
+      <div class="login-notice" role="status">
+        <strong>این نسخه نمایشی (استاتیک) است.</strong>
+        ورود، رزرو و پنل مدیریت فقط وقتی کار می‌کنند که سایت روی سرور (Flask) اجرا شود.
+        همین آدرس را روی سرور باز کنید تا با نام کاربری و رمز خود وارد شوید.
+      </div>
+      {% endif %}
+
+      <div class="login-pane{% if static_mode %} is-static{% endif %}">
+        <form method="post" action="{{ url_for('account.unified_login') }}">
+          <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+          <div class="fld">
+            <label for="identifier">شماره تلفن یا نام کاربری</label>
+            <input id="identifier" name="identifier" type="text" required dir="ltr"
+                   autocomplete="username" placeholder="09xxxxxxxxx"
+                   value="{{ request.form.get('identifier', '') }}">
+          </div>
+          <div class="fld">
+            <label for="pass">رمز عبور</label>
+            <input id="pass" name="password" type="password" required autocomplete="current-password" dir="ltr">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">ورود</button>
+        </form>
+        <div class="login-links">
+          <a href="{{ url_for('account.forgot_password_page') }}">فراموشی رمز عبور</a>
+        </div>
+        {% if not static_mode %}
+        {# First-time visitors get their own wizard: number -> SMS code ->
+           password. Shown as a real button because it is the entry point the
+           owner asked to be obvious, not a collapsed <details>. #}
+        {# The destination (e.g. the booking page the visitor was sent here
+           from) travels with the sign-up wizard too. #}
+        <a class="btn btn-outline btn-full signup-cta"
+           href="{{ url_for('account.register', next=request.args.get('next')) }}">
+          حساب کاربری ندارید؟ ثبت‌نام کنید
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

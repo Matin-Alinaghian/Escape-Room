@@ -1,0 +1,184 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}رزرو {{ r.code }}{% endblock %}
+{% block toptitle %}جزئیات رزرو{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>رزرو <span class="code-chip">{{ r.code }}</span></h1>
+    <p class="muted">
+      <span class="status status-{{ r.status }}">{{ status_labels.get(r.status, r.status) }}</span>
+      — ثبت: {{ r.created_at|iso_dt }}
+    </p>
+  </div>
+  <div class="head-actions">
+    <a class="btn-mini" href="/booking/{{ r.code }}" target="_blank" rel="noopener">صفحه مشتری ↗</a>
+    <a class="btn-mini" href="/admin/bookings">بازگشت</a>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2 class="panel-title">اطلاعات رزرو</h2>
+    <dl class="info-list">
+      <dt>اتاق</dt>
+      <dd><a class="row-link" href="/admin/rooms/{{ r.scenario_id }}/edit">{{ r.scenario_title }}</a></dd>
+      <dt>تاریخ و ساعت</dt>
+      <dd>{{ r.slot_date|jdate(weekday=true) }} — ساعت {{ r.start_time|fa }}</dd>
+      <dt>تعداد نفرات</dt>
+      <dd>{{ r.participants|fa }}</dd>
+      <dt>قیمت واحد</dt>
+      <dd>{{ r.unit_price|int|money }}</dd>
+      <dt>مبلغ کل</dt>
+      <dd><strong>{{ r.total_price|int|money }}</strong></dd>
+      <dt>منبع</dt>
+      <dd>{{ r.source }}</dd>
+      {% if r.cancel_reason %}<dt>دلیل لغو</dt><dd>{{ r.cancel_reason }}</dd>{% endif %}
+    </dl>
+
+    <h2 class="panel-title">مشتری</h2>
+    <dl class="info-list">
+      <dt>نام</dt>
+      <dd><a class="row-link" href="/admin/customers/{{ r.customer_id }}">{{ r.customer_name }}</a></dd>
+      <dt>تلفن</dt>
+      <dd dir="ltr">{{ r.customer_phone|fa }}</dd>
+      {% if r.customer_email %}<dt>ایمیل</dt><dd dir="ltr">{{ r.customer_email }}</dd>{% endif %}
+    </dl>
+
+    {% if r.customer_note %}
+      <h2 class="panel-title">یادداشت مشتری</h2>
+      <p class="note-box">{{ r.customer_note }}</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">تغییر وضعیت</h2>
+    {% if next_states %}
+      <div class="status-actions">
+        {% for s in next_states %}
+          <form method="post" action="/admin/bookings/{{ r.id }}/status" class="status-form">
+            <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="{{ s }}">
+            <input type="text" name="note" placeholder="یادداشت (اختیاری)" class="filter-input grow">
+            <button class="btn-mini {% if s == 'cancelled' %}danger{% elif s in ('confirmed','completed') %}ok{% endif %}"
+                    type="submit">{{ status_labels.get(s, s) }}</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">این رزرو در وضعیت نهایی است و تغییر دیگری ندارد.</p>
+    {% endif %}
+
+    {# The internal note is part of the panel, so it is styled like the rest of
+       it: a themed card, dark field, red focus ring — instead of the browser's
+       default white textarea. #}
+    <h2 class="panel-title">یادداشت داخلی</h2>
+    <form method="post" action="/admin/bookings/{{ r.id }}/note" class="note-editor">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <textarea name="internal_note" rows="3" placeholder="یادداشت داخلی (برای مشتری نمایش داده نمی‌شود)">{{ r.internal_note or '' }}</textarea>
+      <div class="note-editor-foot">
+        <span class="hint">فقط در پنل دیده می‌شود؛ مشتری نه در سایت و نه در پیامک نمی‌بیند.</span>
+        <button class="btn-mini primary" type="submit">ذخیره یادداشت</button>
+      </div>
+    </form>
+
+    <h2 class="panel-title">انتقال به ساعت دیگر</h2>
+    {% if scenario_slots %}
+      <form method="post" action="/admin/bookings/{{ r.id }}/reschedule" class="status-form column">
+        <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+        <select name="slot_id" class="filter-input grow">
+          {% for sl in scenario_slots %}
+            <option value="{{ sl.id }}" {% if sl.id == r.slot_id %}selected{% endif %}>
+              {{ sl.slot_date|jdate }} — {{ sl.start_time|fa }} تا {{ sl.end_time|fa }}
+              {% if sl.status != 'open' %} (بسته){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <button class="btn-mini" type="submit">انتقال</button>
+      </form>
+    {% else %}
+      <p class="empty">برای این اتاق ساعت آینده‌ای ساخته نشده است. ابتدا از صفحه زمان‌بندی بازسازی کنید.</p>
+    {% endif %}
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2 class="panel-title">تاریخچه وضعیت</h2>
+    {% if history %}
+      <table class="data-table">
+        <thead><tr><th>از</th><th>به</th><th>عامل</th><th>یادداشت</th><th>زمان</th></tr></thead>
+        <tbody>
+          {% for h in history %}
+            <tr>
+              <td>{{ h.from_status or '—' }}</td>
+              <td>{{ h.to_status }}</td>
+              <td>{{ h.actor or '—' }}</td>
+              <td>{{ h.note or '—' }}</td>
+              <td class="num muted">{{ h.created_at|iso_dt }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">تاریخچه‌ای ثبت نشده است.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">پیامک‌ها</h2>
+    {% if notifications %}
+      <table class="data-table">
+        <thead><tr><th>رویداد</th><th>وضعیت</th><th>تلاش</th><th>زمان</th></tr></thead>
+        <tbody>
+          {% for n in notifications %}
+            <tr>
+              <td>{{ n.event_type }}</td>
+              <td>
+                <span class="status status-{{ 'confirmed' if n.status == 'sent' else ('pending' if n.status == 'queued' else 'cancelled') }}">
+                  {{ n.status }}
+                </span>
+                {% if n.last_error %}<span class="muted block">{{ n.last_error }}</span>{% endif %}
+              </td>
+              <td class="num">{{ n.attempts|fa }}</td>
+              <td class="num muted">{{ n.created_at|iso_dt }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">پیامکی ثبت نشده است.</p>
+    {% endif %}
+
+    <h2 class="panel-title">پرداخت</h2>
+    {% if payments %}
+      <table class="data-table">
+        <thead><tr><th>مرجع</th><th>مبلغ</th><th>وضعیت</th><th>تأیید</th></tr></thead>
+        <tbody>
+          {% for p in payments %}
+            <tr>
+              <td dir="ltr">{{ p.reference or '—' }}</td>
+              <td class="num">{{ p.amount|int|money }}</td>
+              <td><span class="status status-{{ 'confirmed' if p.status == 'paid' else 'pending' }}">{{ p.status }}</span></td>
+              <td class="num muted">{{ p.verified_at|iso_dt or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">درگاه پرداخت فعال نیست، پس رزرو بدون پرداخت ثبت شده است.</p>
+    {% endif %}
+
+    {% if review %}
+      <h2 class="panel-title">نظر ثبت‌شده</h2>
+      <div class="note-box">
+        <span class="stars-mini" aria-label="امتیاز">
+          {% for i in range(1, 6) %}<span class="{{ 'on' if i <= review.rating else '' }}">★</span>{% endfor %}
+        </span>
+        <p>{{ review.body }}</p>
+        <span class="status status-{{ 'confirmed' if review.status == 'approved' else 'pending' }}">{{ review.status }}</span>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

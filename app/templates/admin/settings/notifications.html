@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}صف پیامک{% endblock %}
+{% block toptitle %}صف پیامک‌ها{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>صف پیامک‌ها</h1>
+    <p class="muted">
+      ارسال پیامک: {{ 'فعال' if sms_enabled else 'غیرفعال — فقط ثبت می‌شود' }}
+    </p>
+  </div>
+  <a class="btn-mini" href="/admin/settings">بازگشت به تنظیمات</a>
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">
+    queued: {{ counts.get('queued', 0)|fa }} —
+    sent: {{ counts.get('sent', 0)|fa }} —
+    failed: {{ counts.get('failed', 0)|fa }} —
+    skipped: {{ counts.get('skipped', 0)|fa }}
+  </h2>
+  {% if rows %}
+    <table class="data-table">
+      <thead><tr><th>رویداد</th><th>کد رزرو</th><th>گیرنده</th><th>وضعیت</th><th>تلاش</th><th>خطا</th><th>زمان</th></tr></thead>
+      <tbody>
+        {% for n in rows %}
+          <tr>
+            <td>{{ n.event_type }}</td>
+            <td class="num"><a class="row-link" href="/admin/bookings/{{ n.reservation_id }}">{{ n.booking_code or '—' }}</a></td>
+            <td class="num" dir="ltr">{{ n.recipient|fa }}</td>
+            <td><span class="status status-{{ 'confirmed' if n.status == 'sent' else ('pending' if n.status == 'queued' else 'cancelled') }}">{{ n.status }}</span></td>
+            <td class="num">{{ n.attempts|fa }}</td>
+            <td class="muted">{{ n.last_error or '—' }}</td>
+            <td class="num muted">{{ n.created_at|iso_dt }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">هنوز پیامکی ثبت نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}

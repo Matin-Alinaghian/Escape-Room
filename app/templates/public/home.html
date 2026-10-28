@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block pagetitle %}{{ hero_title|replace('\n', ' ') | default('فقط یک بازی نیست، یک تجربه است') }}{% endblock %}
+{% block og_title %}{{ hero_title|replace('\n', ' ') | default('فقط یک بازی نیست، یک تجربه است') }}{% endblock %}
+
+{% block content %}
+<!-- ===================== HERO ===================== -->
+<section class="hero">
+  <div class="hero-grid">
+    {# RTL: the first child renders on the right, so the copy comes first. #}
+    <div class="hero-copy">
+      <h1 class="hero-title">
+        <span class="line red">فرار</span>
+        <span class="line white">فقط یک بازی نیست</span>
+        <span class="line red">یک تجربه است ...</span>
+      </h1>
+      <p class="hero-sub">{{ hero_text or 'اتاق‌های فرار با سناریوهای واقعی، معماهای جذاب و معجونی از هیجان' }}</p>
+      <a class="btn btn-primary btn-hero" href="/rooms">
+        <span aria-hidden="true">←</span>
+        {{ hero_cta or 'مشاهده اتاق‌ها' }}
+      </a>
+    </div>
+  </div>
+
+  <div class="paper-divider" aria-hidden="true"></div>
+</section>
+
+<!-- ===================== FEATURED CAROUSEL ===================== -->
+{% if featured|length > 1 %}
+<section class="featured-section" aria-label="اتاق‌های منتخب">
+  <div class="container">
+    <div class="featured-head">
+      <h2 class="featured-title">اتاق‌های منتخب</h2>
+      <div class="featured-nav">
+        <button class="featured-btn" id="featPrev" type="button" aria-label="سناریوی قبلی">→</button>
+        <button class="featured-btn" id="featNext" type="button" aria-label="سناریوی بعدی">←</button>
+      </div>
+    </div>
+    <div class="featured-stage" id="featStage" aria-live="polite">
+      {% for room in featured %}
+        <a class="featured-card{% if loop.first %} is-active{% endif %}"
+           href="/rooms/{{ room.slug }}" data-feat-index="{{ loop.index0 }}"
+           aria-hidden="{{ 'false' if loop.first else 'true' }}" tabindex="{{ 0 if loop.first else -1 }}">
+          <span class="featured-page page-left" aria-hidden="true"></span>
+          <span class="featured-page page-right" aria-hidden="true"></span>
+          <span class="featured-img-wrap" aria-hidden="false">
+            {% if room.cover %}
+              <img class="featured-img" src="{{ room.cover }}" alt="{{ room.title }}" loading="lazy" decoding="async" width="900" height="900">
+            {% else %}
+              <span class="featured-img featured-img-placeholder"></span>
+            {% endif %}
+          </span>
+          <span class="featured-body">
+            <span class="featured-name">{{ room.title }}</span>
+            <span class="featured-meta">{{ room.duration_minutes|fa }} دقیقه · {{ room.min_players|players(room.max_players) }}</span>
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+    <div class="featured-dots" role="tablist" aria-label="انتخاب سناریوی منتخب">
+      {% for room in featured %}
+        <button class="featured-dot{% if loop.first %} is-active{% endif %}" type="button"
+                role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}"
+                aria-label="{{ room.title }}" data-feat-dot="{{ loop.index0 }}"></button>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ===================== POLAROID STRIP ===================== -->
+<section class="polaroid-section">
+  <div class="polaroid-strip" role="list">
+    {% for shot in polaroids %}
+      <figure class="polaroid" role="listitem">
+        <span class="polaroid-clip" aria-hidden="true"></span>
+        <img src="{{ shot.src }}" alt="{{ shot.alt }}" loading="lazy" decoding="async" width="520" height="520">
+        <figcaption class="polaroid-caption">{{ shot.caption }}</figcaption>
+      </figure>
+    {% endfor %}
+    <span class="thread" aria-hidden="true"></span>
+  </div>
+</section>
+
+<!-- ===================== ROOMS ===================== -->
+<section class="rooms-section" id="rooms">
+  <div class="container">
+    <h2 class="section-title">
+      <span class="stroke" aria-hidden="true"></span>
+      {{ section_rooms_title or 'اتاق‌های فرار ما' }}
+      <span class="stroke" aria-hidden="true"></span>
+    </h2>
+    <p class="section-sub">{{ section_featured_title or 'اتاق‌های منتخب ما' }}</p>
+
+    <div class="rooms-grid">
+      {% for room in rooms %}
+        <article class="room-card" itemscope itemtype="https://schema.org/Thing">
+          <a class="room-card-link" href="/rooms/{{ room.slug }}">
+            <div class="room-img-wrap">
+              {% if room.cover %}
+                <img class="room-img" src="{{ room.cover }}" alt="{{ room.title }}" itemprop="image" loading="lazy" decoding="async" width="900" height="900">
+              {% else %}
+                <div class="room-img room-img-placeholder"></div>
+              {% endif %}
+              <span class="room-ring" aria-hidden="true"></span>
+            </div>
+            <div class="room-body">
+              <h3 class="room-title" itemprop="name">{{ room.title }}</h3>
+              {% if not room.bookable %}
+                <span class="room-closed-badge">موقتاً بسته</span>
+              {% endif %}
+              <div class="room-meta">
+                <span class="meta-item" title="سختی">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6 5.5.8-4.5 4.2.9 5.4L12 17.8l-5.3 2.6.9-5.4L4 8.8l5.5-.8z" fill="currentColor"/></svg>
+                  {{ ['آسان','کمی سخت','متوسط','سخت','خیلی سخت'][room.difficulty-1]|default('متوسط') }}
+                </span>
+                <span class="meta-item" title="تعداد بازیکنان">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1 15l-4-4 1.4-1.4L11 12l-3.3-3.3 1.4-1.4L11 9l4 4-1.4 1.4L13 15l-4 4z" fill="currentColor"/></svg>
+                  {{ room.min_players|players(room.max_players) }}
+                </span>
+                <span class="meta-item" title="مدت بازی">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.9 1.2c0 1.4-1.1 2.5-2.5 2.5S6.9 2.6 6.9 1.2s1.1-2.5 2.5-2.5 2.5 1.1 2.5 2.5zm0 4.6c-2.3 0-4.2 1.4-5.1 3.5-1 2.3-0.2 5 2.1 6.3 1.1 1.1 3.4 2.6 4.8 2.2 1.1-2.3.5-5.3-1.5-7 -1.6-1.3-3.6-1.2-4.8-1.2zm0 5.5c-1.1 1.4-1.7 3.2-1.4 5 0.5-1.6 2-2.7 3.5-3 0.8-1 1.6-1.6 2.5-1.6.7 0 1.5.3 1.8.8 0.5-1.5 1.8-2.5 3.1-2.5 1.2 0 2.3.6 2.9 1.7h-14z" fill="currentColor"/></svg>
+                  {{ room.duration_minutes|fa }} دقیقه
+                </span>
+                {% if room.stats.has_reviews %}
+                <span class="meta-item meta-rating" title="میانگین امتیاز کاربران">
+                  {{ room.stats.average|stars('میانگین امتیاز کاربران') }}
+                  {{ room.stats.average|fa }}
+                  <span class="meta-sub">({{ room.stats.count|fa }} نظر)</span>
+                </span>
+                {% endif %}
+                {% set card_price = room.price_per_person or room.price_per_group or 0 %}
+                {% if card_price %}
+                <span class="meta-item meta-price" title="قیمت">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5v9M9.7 9.8h4.6M9.7 14.2h4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  از {{ card_price|int|money }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
+        </article>
+      {% else %}
+        <p class="empty">هنوز اتاقی ثبت نشده.</p>
+      {% endfor %}
+    </div>
+
+    <div class="section-cta">
+      <a class="btn btn-primary btn-lg" href="/rooms">مشاهده همه اتاق‌ها →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== REVIEWS ===================== -->
+{# The reference layout has no reviews block on the homepage, and an empty
+   "no reviews yet" band would be worse than nothing. Render it only when the
+   site actually has approved reviews, and let the CMS toggle switch it off. #}
+{% if show_how_it_works|default(true) and reviews %}
+<section class="reviews-section">
+  <div class="reviews-media" aria-hidden="true"></div>
+  <div class="container reviews-inner">
+    <h2 class="section-title">
+      {{ section_reviews_title or 'نظرات مشتریان' }}
+    </h2>
+
+    {% if review_stats.has_reviews %}
+      <div class="review-stats">
+        <div class="rating-big">
+          {{ review_stats.average|stars('امتیاز متوسط') }}
+          <span class="rating-num">{{ review_stats.average|fa }}</span>
+          <span class="rating-count">از {{ review_stats.count|fa }} نظر</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="reviews-grid">
+      {% for review in reviews %}
+        <article class="review-card" itemscope itemtype="https://schema.org/Review">
+          <meta itemprop="reviewRating" content="{{ review.rating }}">
+          <div class="review-stars" aria-label="امتیاز">
+            {% for i in range(1, 6) %}
+              <span class="{{ 'on' if i <= review.rating else '' }}" aria-hidden="true">★</span>
+            {% endfor %}
+          </div>
+          <blockquote class="review-body" itemprop="reviewBody">{{ review.body }}</blockquote>
+          <cite class="review-author" itemprop="author">{{ review.customer_name }}</cite>
+        </article>
+      {% endfor %}
+    </div>
+
+    <div class="section-cta">
+      <a class="btn btn-outline" href="/reviews">همه نظرات →</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

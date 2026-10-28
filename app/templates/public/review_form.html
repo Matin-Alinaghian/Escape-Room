@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block pagetitle %}ارزیابی تجربه — {{ info.scenario_title|default('') }}{% endblock %}
+
+{% block content %}
+<section class="review-section">
+  <div class="container review-card">
+    <nav class="breadcrumb">
+      {% if info.scenario_slug %}
+        <a href="/rooms/{{ info.scenario_slug }}">اتاق‌ها</a> /
+      {% endif %}
+      ثبت نظر
+    </nav>
+
+    <h1 class="review-title">ارزیابی تجربه</h1>
+    <p class="review-scenario">{{ info.scenario_title|default('') }}</p>
+
+    {% if not info.eligible %}
+      <div class="review-notice">{{ info.reason|default('نمی‌توان نظر داد.') }}</div>
+      <a class="btn btn-outline" href="/">بازگشت</a>
+    {% else %}
+      <form method="post" action="/review/{{ code }}" novalidate>
+        <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+
+        <div class="field">
+          <label for="rating">امتیاز</label>
+          <div class="star-picker" id="starPicker" role="radiogroup" aria-label="امتیاز">
+            {% for i in range(1, 6) %}
+              <button type="button" class="star{% if i == 5 %} active{% endif %}" data-value="{{ i }}"
+                      aria-label="{{ i }} از ۵" role="radio" aria-checked="{{ 'true' if i==5 else 'false' }}">
+                ★
+              </button>
+            {% endfor %}
+          </div>
+          <input type="hidden" id="rating" name="rating" value="5" required>
+        </div>
+
+        <div class="field">
+          <label for="title">عنوان نظر</label>
+          <input id="title" name="title" type="text" maxlength="120"
+                 value="{{ request.form.get('title') or '' }}" dir="auto">
+        </div>
+
+        <div class="field">
+          <label for="body">متن نظر <span class="optional">(حداقل ۱۰ کاراکتر)</span></label>
+          <textarea id="body" name="body" rows="6" maxlength="2000"
+                    dir="auto" placeholder="تجربه خود را بنویسید...">{{ request.form.get('body') or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-full">ارسال نظر</button>
+        <a class="btn btn-outline" href="/">لغو</a>
+      </form>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+(function(){
+  var stars = document.querySelectorAll('#starPicker .star');
+  var input = document.getElementById('rating');
+  if(!stars.length || !input) return;
+  stars.forEach(function(s, i){
+    s.addEventListener('click', function(){
+      stars.forEach(function(st){ st.classList.remove('active'); st.setAttribute('aria-checked','false'); });
+      s.classList.add('active');
+      s.setAttribute('aria-checked','true');
+      input.value = i+1;
+    });
+    s.addEventListener('mouseenter', function(){
+      stars.forEach(function(st, idx){ if(idx <= i){ st.style.color = '#ff3b30'; } else { st.style.color = ''; } });
+    });
+    s.addEventListener('mouseleave', function(){
+      stars.forEach(function(st){ st.style.color = ''; st.classList.toggle('active', st.classList.contains('active')); });
+    });
+  });
+})();
+</script>
+{% endblock %}

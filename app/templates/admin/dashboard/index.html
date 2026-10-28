@@ -1,0 +1,295 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}داشبورد{% endblock %}
+{% block toptitle %}داشبورد{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>سلام، {{ me.display_name }}</h1>
+    {# The clock is the shop's, not the browser's: the server hands over the
+       exact instant plus the two Jalali labels it may need, and admin.js keeps
+       it ticking so an open tab can never show an hour that has gone. #}
+    <p class="muted admin-clock" id="adminClock"
+       data-now="{{ now_iso }}" data-date="{{ today_iso }}"
+       data-today-label="{{ today_label }}" data-tomorrow-label="{{ tomorrow_label }}">
+      <span id="adminClockDate">{{ today_label }}</span> —
+      ساعت <b id="adminClockTime" class="num">{{ now_label|fa }}</b>
+    </p>
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ dashboard_stats.today_count|fa }}</span>
+    <span class="stat-tile-label">رزروهای امروز</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ dashboard_stats.today_participants|fa }}</span>
+    <span class="stat-tile-label">بازیکنان امروز</span>
+  </div>
+  {# The pending tile doubles as the entry point to the waitlist: a request
+     arriving from the public site shows up here first. #}
+  <a class="stat-tile warn stat-tile-link" href="/admin/bookings/waitlist">
+    <span class="stat-tile-num">{{ dashboard_stats.pending_count|fa }}</span>
+    <span class="stat-tile-label">در انتظار تأیید — مشاهده لیست انتظار</span>
+  </a>
+  <div class="stat-tile ok">
+    <span class="stat-tile-num">{{ dashboard_stats.confirmed_count|fa }}</span>
+    <span class="stat-tile-label">تأیید شده ({{ horizon_days|fa }} روز)</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ dashboard_stats.revenue_today|int|money }}</span>
+    <span class="stat-tile-label">درآمد امروز</span>
+  </div>
+  <div class="stat-tile money">
+    <span class="stat-tile-num">{{ dashboard_stats.revenue_month|int|money }}</span>
+    <span class="stat-tile-label">درآمد 30 روز</span>
+  </div>
+</div>
+
+{# ---- Today, per room -------------------------------------------------
+   The rooms are listed one after another; picking one shows (and manages)
+   that room's sessions underneath, and lets the administrator close the room
+   itself — a closed room takes no new reservation anywhere on the site. #}
+<section class="panel panel-today" id="today">
+  <div class="panel-head">
+    <h2 class="panel-title">ساعات امروز</h2>
+    <span class="muted today-note">امروز، {{ today_label }}</span>
+  </div>
+
+  <div class="room-picker" role="tablist" aria-label="اتاق‌ها">
+    <a class="room-chip{% if not active_room %} active{% endif %}" href="/admin/#today"
+       {% if not active_room %}aria-current="page"{% endif %}>
+      <span class="room-chip-name">همه اتاق‌ها</span>
+      <span class="room-chip-meta">ساعات امروز همه اتاق‌ها</span>
+    </a>
+    {% for room in rooms %}
+      <a class="room-chip{% if active_room == room.id %} active{% endif %}{% if not room.bookable %} is-closed{% endif %}"
+         href="/admin/?room={{ room.id }}#today"
+         {% if active_room == room.id %}aria-current="page"{% endif %}>
+        <span class="room-chip-name">{{ room.title }}</span>
+        <span class="room-chip-meta">
+          {{ room.open_count|fa }} ساعت باز{% if room.booked_count %} • {{ room.booked_count|fa }} رزرو{% endif %}
+        </span>
+        <span class="tag {{ 'danger' if not room.bookable else 'ok' }}">
+          {{ 'بسته' if not room.bookable else 'باز' }}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if active_room_row %}
+    <div class="room-bar">
+      <div class="room-bar-info">
+        <strong>{{ active_room_row.title }}</strong>
+        <span class="muted block">
+          {% if active_room_row.bookable %}
+            این اتاق برای رزرو باز است.
+          {% else %}
+            این اتاق بسته است؛ تا زمانی که باز نشود هیچ رزرو جدیدی ثبت نمی‌شود.
+          {% endif %}
+        </span>
+      </div>
+      {% if can_schedule %}
+        <form method="post" action="/admin/schedules/room/{{ active_room_row.id }}/booking" class="inline-form">
+          <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="/admin/?room={{ active_room_row.id }}#today">
+          <input type="hidden" name="open" value="{{ 0 if active_room_row.bookable else 1 }}">
+          <button class="btn-mini {{ 'danger' if active_room_row.bookable else 'ok' }}" type="submit">
+            {{ 'بستن این اتاق' if active_room_row.bookable else 'باز کردن این اتاق' }}
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="panel-table">
+    {% if today_slots %}
+      <table class="data-table today-table">
+        <thead>
+          <tr>
+            <th>ساعت</th><th>اتاق</th><th>ظرفیت</th><th>وضعیت</th><th>عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sl in today_slots %}
+            <tr class="row-{{ sl.state }}">
+              <td class="num" data-label="ساعت">{{ sl.start_time|fa }} — {{ sl.end_time|fa }}</td>
+              <td data-label="اتاق">{{ sl.scenario_title }}</td>
+              <td class="num" data-label="ظرفیت">{{ sl.taken|fa }}/{{ sl.capacity|fa }}</td>
+              <td data-label="وضعیت">
+                {# A session with a reservation reads «رزرو شده» and never «باز»
+                   again, however many seats are still free in it. #}
+                <span class="status status-{{ sl.pill }}">{{ sl.state_label }}</span>
+                {% if sl.state == 'booked' %}
+                  <span class="muted block">{{ sl.remaining|fa }} جای خالی</span>
+                {% endif %}
+              </td>
+              <td class="actions-cell" data-label="عملیات">
+                {% if not can_schedule %}
+                  <span class="muted">—</span>
+                {% elif sl.reserved and sl.state != 'blocked' %}
+                  <form method="post" action="/admin/slots/block" class="inline-form">
+                    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="slot_id" value="{{ sl.id }}">
+                    <input type="hidden" name="next" value="/admin/{% if active_room %}?room={{ active_room }}{% endif %}#today">
+                    <button class="btn-mini" type="submit">بستن این ساعت</button>
+                  </form>
+                {% elif sl.reserved %}
+                  <span class="muted">رزرو دارد و باز نمی‌شود</span>
+                {% elif sl.state == 'blocked' %}
+                  <form method="post" action="/admin/slots/block" class="inline-form">
+                    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="slot_id" value="{{ sl.id }}">
+                    <input type="hidden" name="next" value="/admin/{% if active_room %}?room={{ active_room }}{% endif %}#today">
+                    <button class="btn-mini ok" type="submit">باز کردن</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="/admin/slots/block" class="inline-form">
+                    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="slot_id" value="{{ sl.id }}">
+                    <input type="hidden" name="next" value="/admin/{% if active_room %}?room={{ active_room }}{% endif %}#today">
+                    <button class="btn-mini" type="submit">بستن این ساعت</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">برای امروز ساعتی ثبت نشده است.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">نظرات در انتظار تأیید</h2>
+    {% if not show_reviews %}
+      <p class="empty">دسترسی مشاهده نظرات را ندارید.</p>
+    {% elif reviews_new %}
+      <div class="review-queue">
+        {% for r in reviews_new %}
+          <article class="review-queue-item">
+            <div class="review-queue-head">
+              <span class="stars-mini" aria-label="امتیاز">
+                {% for i in range(1, 6) %}
+                  <span class="{{ 'on' if i <= r.rating else '' }}">★</span>
+                {% endfor %}
+              </span>
+              <span class="muted">{{ r.scenario_title }}</span>
+            </div>
+            <p class="review-queue-body">{{ r.body[:160] }}</p>
+            <div class="review-queue-foot">
+              <span class="muted">{{ r.customer_name }}</span>
+              <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="approve">
+                <button class="btn-mini ok" type="submit">تأیید</button>
+              </form>
+              <form method="post" action="/admin/reviews/{{ r.id }}/moderate" class="inline-form">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="reject">
+                <button class="btn-mini" type="submit">رد</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">نظری در انتظار نیست.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2 class="panel-title">رزروهای پیش رو</h2>
+    <a class="btn-mini" href="/admin/bookings">همه رزروها</a>
+  </div>
+  {% if upcoming %}
+    <table class="data-table">
+      <thead>
+        <tr><th>کد</th><th>اتاق</th><th>مشتری</th><th>تاریخ</th><th>ساعت</th><th>نفرات</th><th>مبلغ</th><th>وضعیت</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in upcoming %}
+          <tr>
+            <td class="num"><a href="/admin/bookings/{{ r.id }}">{{ r.code }}</a></td>
+            <td>{{ r.scenario_title }}</td>
+            <td>{{ r.customer_name }}<span class="muted num"> {{ r.customer_phone|fa }}</span></td>
+            <td>{{ r.slot_date|jdate }}</td>
+            <td class="num">{{ r.start_time|fa }}</td>
+            <td class="num">{{ r.participants|fa }}</td>
+            <td class="num">{{ r.total_price|int|money }}</td>
+            <td><span class="status status-{{ r.status }}">{{ status_labels.get(r.status, r.status) }}</span></td>
+            <td><a class="row-link" href="/admin/bookings/{{ r.id }}">جزئیات</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">رزروی در آینده ثبت نشده است.</p>
+  {% endif %}
+</section>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2 class="panel-title">آخرین رزروهای ثبت‌شده</h2>
+    {% if recent %}
+      <table class="data-table">
+        <thead><tr><th>کد</th><th>اتاق</th><th>مشتری</th><th>وضعیت</th><th>ثبت</th></tr></thead>
+        <tbody>
+          {% for r in recent %}
+            <tr>
+              <td class="num"><a href="/admin/bookings/{{ r.id }}">{{ r.code }}</a></td>
+              <td>{{ r.scenario_title }}</td>
+              <td>{{ r.customer_name }}</td>
+              <td><span class="status status-{{ r.status }}">{{ status_labels.get(r.status, r.status) }}</span></td>
+              <td class="num muted">{{ r.created_at|iso_dt }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">هنوز رزروی ثبت نشده است.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">وضعیت نظرات</h2>
+    <div class="review-summary">
+      <div>
+        <span class="review-summary-num">{{ dashboard_stats.review_average|fa }}</span>
+        <span class="muted">میانگین امتیاز</span>
+      </div>
+      <div>
+        <span class="review-summary-num">{{ dashboard_stats.review_total|fa }}</span>
+        <span class="muted">نظر منتشرشده</span>
+      </div>
+      <div>
+        <span class="review-summary-num">{{ dashboard_stats.review_pending|fa }}</span>
+        <span class="muted">در انتظار</span>
+      </div>
+    </div>
+    {% if reviews_approved %}
+      <div class="review-mini-list">
+        {% for r in reviews_approved %}
+          <div class="review-mini">
+            <div class="review-queue-head">
+              <span class="stars-mini" aria-label="امتیاز">
+                {% for i in range(1, 6) %}
+                  <span class="{{ 'on' if i <= r.rating else '' }}">★</span>
+                {% endfor %}
+              </span>
+              <span class="muted">{{ r.scenario_title }}</span>
+            </div>
+            <p class="review-queue-body">{{ r.body[:120] }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">هنوز نظری منتشر نشده است.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}تصاویر {{ row.title }}{% endblock %}
+{% block toptitle %}تصاویر اتاق{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>تصاویر «{{ row.title }}»</h1>
+    <p class="muted">تصویر کاور روی صفحه اتاق و کارت‌های صفحه اصلی نمایش داده می‌شود.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn-mini" href="/admin/rooms/{{ row.id }}/edit">ویرایش اتاق</a>
+    <a class="btn-mini" href="/admin/rooms">بازگشت</a>
+  </div>
+</div>
+
+<section class="panel">
+  <form method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="crop_enabled" id="cropEnabled" value="0">
+    <input type="hidden" name="crop_x" id="cropX">
+    <input type="hidden" name="crop_y" id="cropY">
+    <input type="hidden" name="crop_w" id="cropW">
+    <input type="hidden" name="crop_h" id="cropH">
+    <div class="fld">
+      <label for="image">انتخاب تصویر (JPG/PNG/WEBP، حداقل 200×200، حداکثر 5MB)</label>
+      <input id="image" name="image" type="file" accept="image/*" required>
+    </div>
+    <div class="fld">
+      <label for="alt">متن جایگزین</label>
+      <input id="alt" name="alt" value="{{ row.title }}">
+    </div>
+
+    <div id="cropEditor" class="crop-editor hidden">
+      <div class="crop-presets">
+        <button type="button" class="btn-mini crop-ratio active" data-ratio="free">آزاد</button>
+        <button type="button" class="btn-mini crop-ratio" data-ratio="1:1">1:1</button>
+        <button type="button" class="btn-mini crop-ratio" data-ratio="16:9">16:9</button>
+        <button type="button" class="btn-mini crop-ratio" data-ratio="4:3">4:3</button>
+      </div>
+      <div class="crop-viewport" id="cropViewport">
+        <img id="cropImage" alt="پیش‌نمایش برش" draggable="false">
+        <div class="crop-frame" id="cropFrame"></div>
+      </div>
+      <div class="crop-toolbar">
+        <span class="muted num" id="cropInfo"></span>
+        <button type="button" class="btn-mini" id="cropReset">حذف برش (تصویر کامل)</button>
+      </div>
+    </div>
+
+    <button class="btn-mini primary" type="submit">بارگذاری</button>
+  </form>
+</section>
+
+<script src="/static/js/cropper.js?v={{ asset_v('js/cropper.js') }}" defer></script>
+<script defer>
+(function(){
+  var fileInput = document.getElementById('image');
+  if (!fileInput) return;
+  var editor = document.getElementById('cropEditor');
+  var img = document.getElementById('cropImage');
+  var viewport = document.getElementById('cropViewport');
+  var frame = document.getElementById('cropFrame');
+  var info = document.getElementById('cropInfo');
+  var cropEnabled = document.getElementById('cropEnabled');
+  var form = document.getElementById('uploadForm');
+  var cropper = null;
+
+  fileInput.addEventListener('change', function(){
+    var f = fileInput.files && fileInput.files[0];
+    if (!f) { editor.classList.add('hidden'); cropEnabled.value = '0'; return; }
+    var reader = new FileReader();
+    reader.onload = function(){
+      editor.classList.remove('hidden');
+      if (!cropper) {
+        cropper = new MiniCropper(img, { viewport: viewport, frame: frame, onReady: updateInfo });
+      }
+      cropper.setImage(reader.result);
+    };
+    reader.readAsDataURL(f);
+  });
+
+  function updateInfo(){
+    if (!cropper) return;
+    var c = cropper.getCrop();
+    info.textContent = 'برش: ' + c.w + '×' + c.h + ' پیکسل';
+  }
+  viewport.addEventListener('pointerup', function(){ setTimeout(updateInfo, 0); });
+  viewport.addEventListener('wheel', function(){ setTimeout(updateInfo, 60); });
+
+  document.querySelectorAll('.crop-ratio').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.crop-ratio').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var ratio = btn.getAttribute('data-ratio');
+      var vh = viewport.offsetHeight || 300, vw = viewport.offsetWidth || 480;
+      var r = ratio === '1:1' ? 1 : ratio === '16:9' ? 16/9 : ratio === '4:3' ? 4/3 : null;
+      if (r) {
+        var h = vh, w = h * r;
+        if (w > vw) { w = vw; h = w / r; }
+        frame.style.width = w + 'px';
+        frame.style.height = h + 'px';
+      } else {
+        frame.style.width = '80%'; frame.style.height = '80%';
+      }
+      if (cropper) { cropper.fitFrame(); setTimeout(updateInfo, 0); }
+    });
+  });
+
+  document.getElementById('cropReset').addEventListener('click', function(){
+    cropEnabled.value = '0';
+    info.textContent = 'تصویر کامل بارگذاری می‌شود';
+  });
+
+  form.addEventListener('submit', function(){
+    if (cropper && cropEnabled.value !== '0') {
+      var c = cropper.getCrop();
+      document.getElementById('cropX').value = c.x;
+      document.getElementById('cropY').value = c.y;
+      document.getElementById('cropW').value = c.w;
+      document.getElementById('cropH').value = c.h;
+    }
+  });
+  // enable crop as soon as the editor is used
+  editor.addEventListener('pointerdown', function(){ cropEnabled.value = '1'; });
+})();
+</script>
+
+<section class="panel">
+  <h2 class="panel-title">گالری ({{ images|length|fa }} تصویر)</h2>
+  {% if images %}
+    <div class="gallery-grid">
+      {% for img in images %}
+        <figure class="gallery-item">
+          <img src="{{ img.path }}" alt="{{ img.alt }}" loading="lazy">
+          <figcaption>
+            {% if img.is_cover %}<span class="tag ok">کاور</span>{% endif %}
+            <span class="muted num">{{ img.sort_order|fa }}</span>
+          </figcaption>
+          <div class="gallery-actions">
+            {% if not img.is_cover %}
+              <form method="post" action="/admin/images/{{ img.id }}/cover" class="inline-form">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <button class="btn-mini ok" type="submit">کاور کن</button>
+              </form>
+            {% endif %}
+            <form method="post" action="/admin/images/{{ img.id }}/delete" class="inline-form"
+                  data-confirm="این تصویر حذف شود؟">
+              <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+              <button class="btn-mini danger" type="submit">حذف</button>
+            </form>
+          </div>
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">هنوز تصویری بارگذاری نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}

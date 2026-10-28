@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}پروفایل{% endblock %}
+{% block toptitle %}پروفایل مدیر{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>پروفایل من</h1>
+    <p class="muted">{{ current_admin.display_name }} — {{ current_admin.username }}</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2 class="panel-title">اطلاعات حساب</h2>
+    <dl class="info-list">
+      <dt>نام کاربری</dt><dd dir="ltr">{{ current_admin.username }}</dd>
+      <dt>نقش</dt>
+      <dd>
+        <span class="role-pill role-{{ current_admin.role }}">
+          {{ 'مدیر اصلی (همه دسترسی‌ها)' if current_admin.role == 'super' else 'مدیر ثانویه' }}
+        </span>
+      </dd>
+      <dt>وضعیت</dt><dd>{{ 'فعال' if current_admin.is_active else 'غیرفعال' }}</dd>
+      <dt>آخرین ورود</dt><dd>{{ current_admin.last_login_at|iso_dt or '—' }}</dd>
+      <dt>تاریخ ساخت حساب</dt><dd>{{ current_admin.created_at|iso_dt }}</dd>
+      {% if current_admin.must_change_pw %}
+        <dt>توجه</dt><dd style="color:#f2c14e">رمز عبور موقت است؛ لطفاً آن را تغییر دهید.</dd>
+      {% endif %}
+    </dl>
+
+    <h2 class="panel-title">تغییر نام نمایشی</h2>
+    <form method="post">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="change-name">
+      <div class="fld">
+        <label for="display_name">نام نمایشی</label>
+        <input id="display_name" name="display_name" value="{{ current_admin.display_name }}" required>
+      </div>
+      <button class="btn-mini primary" type="submit">ذخیره</button>
+    </form>
+
+    <h2 class="panel-title">تغییر نام کاربری</h2>
+    <form method="post">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="change-username">
+      <div class="fld">
+        <label for="current_username">نام کاربری فعلی</label>
+        <input id="current_username" name="current_username" value="" required dir="ltr" autocomplete="username">
+        <span class="hint">نام کاربری فعلی خود را وارد کنید</span>
+      </div>
+      <div class="fld">
+        <label for="new_username">نام کاربری جدید</label>
+        <input id="new_username" name="new_username" value="" required minlength="3" dir="ltr" autocomplete="username">
+        <span class="hint">حداقل 3 کاراکتر</span>
+      </div>
+      <div class="fld">
+        <label for="confirm_password_username">رمز عبور فعلی (تأیید هویت)</label>
+        <input id="confirm_password_username" name="confirm_password" type="password" required dir="ltr" autocomplete="current-password">
+      </div>
+      <button class="btn-mini primary" type="submit">تغییر نام کاربری</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">تغییر رمز عبور</h2>
+    <form method="post">
+      <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="change-password">
+      <div class="fld">
+        <label for="old_password">رمز عبور فعلی</label>
+        <input id="old_password" name="old_password" type="password" autocomplete="current-password" required dir="ltr">
+      </div>
+      <div class="fld">
+        <label for="new_password">رمز عبور جدید</label>
+        <input id="new_password" name="new_password" type="password" autocomplete="new-password" required minlength="10" dir="ltr">
+        <span class="hint">حداقل 10 کاراکتر</span>
+      </div>
+      <div class="fld">
+        <label for="confirm_password">تأیید رمز عبور جدید</label>
+        <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required minlength="10" dir="ltr">
+      </div>
+      <button class="btn-mini primary" type="submit">تغییر رمز عبور</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

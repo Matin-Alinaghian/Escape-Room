@@ -1,0 +1,153 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}{{ 'ویرایش اتاق' if row else 'اتاق جدید' }}{% endblock %}
+{% block toptitle %}{{ 'ویرایش اتاق' if row else 'اتاق جدید' }}{% endblock %}
+
+{% macro val(name, default='') %}{{ form.get(name, default) if form else (row[name] if row else default) }}{% endmacro %}
+{% macro num(name, default=0) %}{{ form.get(name) if form and form.get(name) != '' else (row[name] if row else default) }}{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'ویرایش «' ~ row.title ~ '»' if row else 'ساخت اتاق جدید' }}</h1>
+  <a class="btn-mini" href="/admin/rooms">بازگشت به فهرست</a>
+</div>
+
+<form method="post" class="panel form-panel">
+  <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+
+  <div class="form-grid">
+    <div class="fld">
+      <label for="title">عنوان اتاق *</label>
+      <input id="title" name="title" required value="{{ val('title') }}" placeholder="اتاق بیمارستان">
+    </div>
+    <div class="fld">
+      <label for="slug">نشانی (اسلاگ)</label>
+      <input id="slug" name="slug" value="{{ val('slug') }}" placeholder="خودکار از عنوان">
+      <span class="hint">خالی بگذارید تا از عنوان ساخته شود.</span>
+    </div>
+    <div class="fld full">
+      <label for="short_description">توضیح کوتاه</label>
+      <input id="short_description" name="short_description" value="{{ val('short_description') }}">
+    </div>
+    <div class="fld full">
+      <label for="story">داستان</label>
+      <textarea id="story" name="story" rows="6">{{ val('story') }}</textarea>
+    </div>
+  </div>
+
+  <h2 class="panel-title">مشخصات بازی</h2>
+  <div class="form-grid">
+    <div class="fld">
+      <label for="genre">دسته‌بندی</label>
+      <select id="genre" name="genre">
+        {% for g in genres %}
+          <option value="{{ g }}" {% if val('genre') == g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fld">
+      <label for="horror_intensity">شدت وحشت (1 تا 5)</label>
+      <input id="horror_intensity" name="horror_intensity" type="number" min="1" max="5" value="{{ num('horror_intensity', 3) }}">
+    </div>
+    <div class="fld">
+      <label for="difficulty">سختی (1 تا 5)</label>
+      <input id="difficulty" name="difficulty" type="number" min="1" max="5" value="{{ num('difficulty', 3) }}">
+    </div>
+    <div class="fld">
+      <label for="duration_minutes">مدت (دقیقه)</label>
+      <input id="duration_minutes" name="duration_minutes" type="number" min="15" max="300" value="{{ num('duration_minutes', 60) }}">
+    </div>
+    <div class="fld">
+      <label for="min_players">حداقل نفرات</label>
+      <input id="min_players" name="min_players" type="number" min="1" value="{{ num('min_players', 2) }}">
+    </div>
+    <div class="fld">
+      <label for="max_players">حداکثر نفرات</label>
+      <input id="max_players" name="max_players" type="number" min="1" value="{{ num('max_players', 6) }}">
+    </div>
+  </div>
+
+  <h2 class="panel-title">قیمت‌گذاری</h2>
+  <div class="form-grid">
+    <div class="fld">
+      <label for="price_per_person">قیمت هر نفر (تومان)</label>
+      <input id="price_per_person" name="price_per_person" type="number" min="0" value="{{ num('price_per_person', 0) }}">
+    </div>
+    <div class="fld">
+      <label for="price_per_group">قیمت گروهی (تومان)</label>
+      <input id="price_per_group" name="price_per_group" type="number" min="0" value="{{ num('price_per_group', 0) }}">
+      <span class="hint">اگر پر باشد، قیمت گروهی جایگزین قیمت هر نفر می‌شود.</span>
+    </div>
+    <div class="fld">
+      <label for="discount_percent">تخفیف (٪)</label>
+      <input id="discount_percent" name="discount_percent" type="number" min="0" max="90" value="{{ num('discount_percent', 0) }}">
+    </div>
+  </div>
+
+  <h2 class="panel-title">اطلاعات بازی</h2>
+  <div class="form-grid">
+    <div class="fld full">
+      <label for="address">آدرس</label>
+      <input id="address" name="address" value="{{ val('address') }}">
+    </div>
+    <div class="fld">
+      <label for="age_restriction">محدودیت سنی</label>
+      <input id="age_restriction" name="age_restriction" value="{{ val('age_restriction') }}" placeholder="12 سال به بالا">
+    </div>
+    <div class="fld">
+      <label for="video_url">لینک ویدیو</label>
+      <input id="video_url" name="video_url" value="{{ val('video_url') }}" dir="auto">
+    </div>
+    <div class="fld full">
+      <label for="safety">نکات ایمنی</label>
+      <textarea id="safety" name="safety" rows="3">{{ val('safety') }}</textarea>
+    </div>
+    <div class="fld full">
+      <label for="rules">قوانین این اتاق</label>
+      <textarea id="rules" name="rules" rows="3">{{ val('rules') }}</textarea>
+    </div>
+    <div class="fld full">
+      <label for="faqs">سوالات متداول</label>
+      <textarea id="faqs" name="faqs" rows="5" placeholder="سؤال | پاسخ&#10;چه ساعتی بازی می‌شود؟ | 10 تا 22">{{ form.get('faqs') if form and form.get('faqs') else faqs_text }}</textarea>
+      <span class="hint">هر خط به شکل «سؤال | پاسخ» یا یک آرایه JSON.</span>
+    </div>
+  </div>
+
+  <h2 class="panel-title">انتشار و سئو</h2>
+  <div class="form-grid">
+    <div class="fld">
+      <label for="status">وضعیت</label>
+      <select id="status" name="status">
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if val('status') == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fld">
+      <label for="sort_order">ترتیب نمایش</label>
+      <input id="sort_order" name="sort_order" type="number" min="0" value="{{ num('sort_order', 0) }}">
+    </div>
+    <div class="fld">
+      <label for="seo_title">عنوان سئو</label>
+      <input id="seo_title" name="seo_title" value="{{ val('seo_title') }}">
+    </div>
+    <div class="fld">
+      <label for="seo_description">توضیح سئو</label>
+      <input id="seo_description" name="seo_description" value="{{ val('seo_description') }}">
+    </div>
+    <div class="fld full">
+      <label class="check-row">
+        <input type="checkbox" name="featured" value="1" {% if row and row.featured %}checked{% endif %}>
+        <span>نمایش در بخش منتخب صفحه اصلی</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn-mini primary" type="submit">ذخیره</button>
+    <a class="btn-mini" href="/admin/rooms">انصراف</a>
+    {% if row %}
+      <a class="btn-mini" href="/admin/rooms/{{ row.id }}/images">مدیریت تصاویر</a>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}رزروها{% endblock %}
+{% block toptitle %}رزروها{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>رزروها</h1>
+    <p class="muted">{{ rows|length|fa }} رزرو در فهرست فعلی</p>
+  </div>
+  <div class="head-actions">
+    {% if counts.get('pending') or counts.get('awaiting_confirmation') %}
+      <a class="btn-mini" href="/admin/bookings/waitlist">
+        لیست انتظار ({{ (counts.get('pending', 0) + counts.get('awaiting_confirmation', 0))|fa }})
+      </a>
+    {% endif %}
+    <a class="btn-mini" href="/admin/reports">گزارش‌ها</a>
+  </div>
+</div>
+
+<form class="filter-bar" method="get">
+  <a class="chip-link{% if not filters.status %} active{% endif %}" href="/admin/bookings">همه</a>
+  {% for s in statuses %}
+    <a class="chip-link{% if filters.status == s %} active{% endif %}" href="/admin/bookings?status={{ s }}">
+      {{ status_labels[s] }}{% if counts.get(s) %} ({{ counts[s]|fa }}){% endif %}
+    </a>
+  {% endfor %}
+  <select name="scenario" class="filter-select">
+    <option value="">همه اتاق‌ها</option>
+    {% for sc in scenarios %}
+      <option value="{{ sc.id }}" {% if filters.scenario == sc.id|string %}selected{% endif %}>{{ sc.title }}</option>
+    {% endfor %}
+  </select>
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="کد، نام یا تلفن" class="filter-input">
+  <button class="btn-mini" type="submit">فیلتر</button>
+  <a class="btn-mini" href="/admin/bookings">پاک کردن</a>
+</form>
+
+<section class="panel">
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>کد</th><th>اتاق</th><th>مشتری</th><th>تاریخ</th><th>ساعت</th>
+          <th>نفرات</th><th>مبلغ</th><th>وضعیت</th><th>منبع</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="num"><a class="row-link strong" href="/admin/bookings/{{ r.id }}">{{ r.code }}</a></td>
+            <td>{{ r.scenario_title }}</td>
+            <td>
+              {{ r.customer_name }}
+              <a class="row-link num" href="/admin/customers/{{ r.customer_id }}" dir="ltr">{{ r.customer_phone|fa }}</a>
+            </td>
+            <td>{{ r.slot_date|jdate }}</td>
+            <td class="num">{{ r.start_time|fa }}</td>
+            <td class="num">{{ r.participants|fa }}</td>
+            <td class="num">{{ r.total_price|int|money }}</td>
+            <td><span class="status status-{{ r.status }}">{{ status_labels.get(r.status, r.status) }}</span></td>
+            <td class="muted">{{ r.source }}</td>
+            <td><a class="row-link" href="/admin/bookings/{{ r.id }}">جزئیات</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">رزروی با این فیلترها یافت نشد.</p>
+  {% endif %}
+</section>
+{% endblock %}

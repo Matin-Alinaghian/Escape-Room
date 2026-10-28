@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}اتاق‌ها{% endblock %}
+{% block toptitle %}اتاق‌ها{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>اتاق‌ها</h1>
+    <p class="muted">
+      {{ stats.total|fa }} اتاق — {{ stats.published|fa }} منتشرشده، {{ stats.draft|fa }} پیش‌نویس
+    </p>
+  </div>
+  <a class="btn-mini primary" href="/admin/rooms/new">+ اتاق جدید</a>
+</div>
+
+<form class="filter-bar" method="get">
+  <span class="muted">وضعیت:</span>
+  <a class="chip-link{% if not active_status %} active{% endif %}" href="/admin/rooms">همه</a>
+  {% for s in statuses %}
+    <a class="chip-link{% if active_status == s %} active{% endif %}" href="/admin/rooms?status={{ s }}">{{ s }}</a>
+  {% endfor %}
+</form>
+
+<section class="panel">
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>تصویر</th><th>عنوان</th><th>دسته</th><th>نفرات</th><th>مدت</th>
+          <th>قیمت</th><th>وضعیت</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="thumb-cell">
+              {% if r.cover_image %}
+                <img class="thumb" src="{{ r.cover_image }}" alt="{{ r.title }}" loading="lazy">
+              {% else %}
+                <span class="thumb thumb-empty">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a class="row-link strong" href="/admin/rooms/{{ r.id }}/edit">{{ r.title }}</a>
+              <span class="muted num">/{{ r.slug }}</span>
+              {% if r.featured %}<span class="tag">منتخب</span>{% endif %}
+            </td>
+            <td>{{ r.genre }}</td>
+            <td class="num">{{ r.min_players|fa }}–{{ r.max_players|fa }}</td>
+            <td class="num">{{ r.duration_minutes|fa }}′</td>
+            <td class="num">
+              {% if r.price_per_group %}
+                {{ r.price_per_group|int|money }}
+              {% else %}
+                {{ r.price_per_person|int|money }}
+              {% endif %}
+            </td>
+            <td>
+              <span class="status status-{{ 'confirmed' if r.status == 'published' else ('pending' if r.status == 'draft' else 'cancelled') }}">
+                {{ r.status }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <a class="btn-mini" href="/rooms/{{ r.slug }}" target="_blank" rel="noopener">نمایش</a>
+              <a class="btn-mini" href="/admin/rooms/{{ r.id }}/edit">ویرایش</a>
+              <a class="btn-mini" href="/admin/rooms/{{ r.id }}/images">تصاویر</a>
+              <a class="btn-mini" href="/admin/schedules?scenario={{ r.id }}">زمان‌بندی</a>
+              <form method="post" action="/admin/rooms/{{ r.id }}/status" class="inline-form">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="status" value="{{ 'draft' if r.status == 'published' else 'published' }}">
+                <button class="btn-mini {{ 'ok' if r.status != 'published' }}" type="submit">
+                  {{ 'پیش‌نویس' if r.status == 'published' else 'انتشار' }}
+                </button>
+              </form>
+              <form method="post" action="/admin/rooms/{{ r.id }}/delete" class="inline-form"
+                    data-confirm="این اتاق حذف شود؟ اگر رزرو داشته باشد به بایگانی می‌رود.">
+                <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                <button class="btn-mini danger" type="submit">حذف</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">هنوز اتاقی ثبت نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}

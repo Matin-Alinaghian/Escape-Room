@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block pagetitle %}۴۰۳ — صفحه قدیمی شده{% endblock %}
+{% block content %}
+<section class="error-section">
+  <div class="container">
+    <div class="error-card">
+      <div class="error-code">۴۰۳</div>
+      <h1 class="error-title">صفحه قدیمی شده بود</h1>
+      <p class="error-text">
+        برای امنیت حساب شما، فرمی که فرستادید منقضی شده است (نشست شما عوض شده
+        یا صفحه مدتی باز مانده بود). یک بار صفحه را باز کنید و دوباره تلاش کنید.
+      </p>
+      <a class="btn btn-primary" href="{{ back_url }}">بازگشت به صفحه قبل</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}لیست انتظار{% endblock %}
+{% block toptitle %}لیست انتظار{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>لیست انتظار</h1>
+    <p class="muted">{{ rows|length|fa }} رزرو در انتظار تأیید</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn-mini" href="/admin/bookings">همه رزروها</a>
+  </div>
+</div>
+
+<section class="panel">
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>کد</th><th>اتاق</th><th>مشتری</th><th>تاریخ</th><th>ساعت</th>
+          <th>نفرات</th><th>مبلغ</th><th>وضعیت</th><th>عملیات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td class="num"><a class="row-link strong" href="/admin/bookings/{{ r.id }}">{{ r.code }}</a></td>
+            <td>{{ r.scenario_title }}</td>
+            <td>
+              {{ r.customer_name }}
+              <a class="row-link num" href="/admin/customers/{{ r.customer_id }}" dir="ltr">{{ r.customer_phone|fa }}</a>
+            </td>
+            <td>{{ r.slot_date|jdate }}</td>
+            <td class="num">{{ r.start_time|fa }}</td>
+            <td class="num">{{ r.participants|fa }}</td>
+            <td class="num">{{ r.total_price|int|money }}</td>
+            <td><span class="status status-{{ r.status }}">{{ status_labels.get(r.status, r.status) }}</span></td>
+            <td>
+              <div class="actions-cell">
+                {% if can('bookings.edit') %}
+                  <form method="post" action="/admin/bookings/{{ r.id }}/status" class="inline-form">
+                    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="confirmed">
+                    <input type="hidden" name="next" value="/admin/bookings/waitlist">
+                    <button class="btn-mini ok" type="submit">تأیید</button>
+                  </form>
+                {% endif %}
+                {% if can('bookings.cancel') %}
+                  <form method="post" action="/admin/bookings/{{ r.id }}/status" class="inline-form">
+                    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="cancelled">
+                    <input type="hidden" name="next" value="/admin/bookings/waitlist">
+                    <button class="btn-mini danger" type="submit">رد</button>
+                  </form>
+                {% endif %}
+                <a class="btn-mini" href="/admin/bookings/{{ r.id }}">جزئیات</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">هیچ رزروی در لیست انتظار نیست.</p>
+  {% endif %}
+</section>
+{% endblock %}

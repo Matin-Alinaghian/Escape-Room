@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}نظر #{{ row.id }}{% endblock %}
+{% block toptitle %}نظر مشتری{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>نظر برای «{{ row.scenario_title }}»</h1>
+    <p class="muted">{{ row.customer_name }} — {{ row.created_at|iso_dt }}</p>
+  </div>
+  <a class="btn-mini" href="/admin/reviews">بازگشت</a>
+</div>
+
+<section class="panel">
+  <div class="review-row-head">
+    <span class="stars-mini" aria-label="امتیاز">
+      {% for i in range(1, 6) %}<span class="{{ 'on' if i <= row.rating else '' }}">★</span>{% endfor %}
+    </span>
+    <span class="status status-{{ 'confirmed' if row.status == 'approved' else ('cancelled' if row.status in ('rejected','hidden') else 'pending') }}">
+      {{ labels.get(row.status, row.status) }}
+    </span>
+    {% if row.reported %}<span class="tag danger">گزارش‌شده: {{ row.report_reason or 'بدون دلیل' }}</span>{% endif %}
+  </div>
+  {% if row.title %}<h2 class="panel-title">{{ row.title }}</h2>{% endif %}
+  <p class="review-full">{{ row.body }}</p>
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">اقدام</h2>
+  <form method="post" class="status-form column">
+    <input type="hidden" name="{{ CSRF_FIELD }}" value="{{ csrf_token() }}">
+    <div class="row-actions">
+      <button class="btn-mini ok" name="action" value="approve" type="submit">تأیید و انتشار</button>
+      <button class="btn-mini" name="action" value="reject" type="submit">رد</button>
+      <button class="btn-mini" name="action" value="hide" type="submit">پنهان کردن</button>
+      <button class="btn-mini danger" name="action" value="delete" type="submit"
+              data-confirm="این نظر برای همیشه حذف شود؟">حذف کامل</button>
+    </div>
+    <div class="fld">
+      <label for="reply">پاسخ مدیر (در صفحه عمومی نمایش داده می‌شود)</label>
+      <textarea id="reply" name="reply" rows="3">{{ row.admin_reply or '' }}</textarea>
+    </div>
+    <button class="btn-mini primary" type="submit">ثبت</button>
+  </form>
+</section>
+{% endblock %}

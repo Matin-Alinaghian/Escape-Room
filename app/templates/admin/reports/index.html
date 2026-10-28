@@ -1,0 +1,125 @@
+{% extends "admin/base.html" %}
+{% block pagetitle %}گزارش‌ها{% endblock %}
+{% block toptitle %}گزارش‌ها{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>گزارش‌ها</h1>
+    <p class="muted">از {{ start|jdate }} تا {{ end|jdate }} ({{ days|fa }} روز)</p>
+  </div>
+</div>
+
+<form class="filter-bar" method="get">
+  <span class="muted">بازه:</span>
+  {% for d in (7, 30, 90, 180) %}
+    <a class="chip-link{% if days == d %} active{% endif %}" href="/admin/reports?days={{ d }}">{{ d }} روز</a>
+  {% endfor %}
+  <span class="spacer"></span>
+  <a class="btn-mini" href="/admin/reports/export/reservations?days={{ days }}">خروجی رزروها</a>
+  <a class="btn-mini" href="/admin/reports/export/customers?days={{ days }}">خروجی مشتریان</a>
+  <a class="btn-mini" href="/admin/reports/export/reviews?days={{ days }}">خروجی نظرات</a>
+</form>
+
+<div class="stat-row">
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ totals.bookings|fa }}</span>
+    <span class="stat-tile-label">تعداد رزرو</span>
+  </div>
+  <div class="stat-tile money">
+    <span class="stat-tile-num">{{ totals.revenue|int|money }}</span>
+    <span class="stat-tile-label">درآمد کل</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ totals.avg_ticket|int|money }}</span>
+    <span class="stat-tile-label">میانگین هر رزرو</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ totals.participants|fa }}</span>
+    <span class="stat-tile-label">بازیکن</span>
+  </div>
+  <div class="stat-tile ok">
+    <span class="stat-tile-num">{{ totals.occupancy|fa }}٪</span>
+    <span class="stat-tile-label">نرخ اشغال {{ totals.capacity|fa }} ظرفیت</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ new_customers|fa }}</span>
+    <span class="stat-tile-label">مشتری جدید</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ new_reviews|fa }}</span>
+    <span class="stat-tile-label">نظر جدید</span>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-tile-num">{{ review_stats.average|fa }}</span>
+    <span class="stat-tile-label">میانگین امتیاز کل</span>
+  </div>
+</div>
+
+{# The two panels of this row are read as a pair, so they get equal columns
+   even on the widest screens; panel-table keeps each table inside its own
+   panel instead of letting it collapse to its content width. #}
+<div class="grid-2 grid-2-even">
+  <section class="panel">
+    <h2 class="panel-title">درآمد روزانه</h2>
+    {% set max_rev = daily|map(attribute='s')|max if daily else 0 %}
+    {% if daily %}
+      <div class="bar-chart" role="img" aria-label="نمودار درآمد روزانه">
+        {% for d in daily %}
+          {% set h = (d.s / max_rev * 100)|round(1) if max_rev else 0 %}
+          <div class="bar-col" title="{{ d.d }} — {{ d.s|int|money }}">
+            <div class="bar" style="height: {{ h }}%"></div>
+            <span class="bar-label num">{{ d.c|fa }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">داده‌ای در این بازه نیست.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel panel-table">
+    <h2 class="panel-title">رزرو به تفکیک وضعیت</h2>
+    {% if by_status %}
+      <table class="data-table">
+        <thead><tr><th>وضعیت</th><th>تعداد</th><th>مبلغ</th></tr></thead>
+        <tbody>
+          {% for r in by_status %}
+            <tr>
+              <td>{{ r.label }}</td>
+              <td class="num">{{ r.c|fa }}</td>
+              <td class="num">{{ r.s|int|money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">رزروی در این بازه نیست.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel panel-table">
+  <h2 class="panel-title">عملکرد اتاق‌ها</h2>
+  {% if by_scenario %}
+    <table class="data-table">
+      <thead><tr><th>اتاق</th><th>تعداد رزرو</th><th>درآمد</th><th>سهم</th></tr></thead>
+      <tbody>
+        {% set max_s = by_scenario[0].s or 1 %}
+        {% for r in by_scenario %}
+          <tr>
+            <td>{{ r.title }}</td>
+            <td class="num">{{ r.c|fa }}</td>
+            <td class="num">{{ r.s|int|money }}</td>
+            <td>
+              <div class="meter"><div class="meter-fill" style="width: {{ (r.s / max_s * 100)|round(1) }}%"></div></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">داده‌ای برای اتاق‌ها ثبت نشده است.</p>
+  {% endif %}
+</section>
+{% endblock %}
